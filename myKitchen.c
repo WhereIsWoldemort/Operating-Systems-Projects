@@ -26,7 +26,7 @@ MODULE_LICENSE("GPL");  /* Kernel needs this license. */
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct {
 	int queue[QUEUE_SIZE];			// a queue of menu items being processed 
-	int currentSize = 0; 			// contains the current number of elements in the queue
+	int currentSize; 			// contains the current number of elements in the queue
 } specialQueue;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +40,7 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count,
 
 static int t_kitchen(void* data);
 void addItem(int menuItem);
+int removeItem(void);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // global variables ///////////////////////////////////////////////////////////////////////////////
@@ -75,6 +76,7 @@ int hello_proc_init(void) {
 
    proc_create_data(ENTRY_NAME, 0, NULL, &hello_proc_ops, NULL);
    mutex_init(&myMutex);   
+   kitchenQueue.currentSize = 0;
 
    /* This message will print in /var/log/syslog or on the first tty. */
    printk("/proc/%s created\n", ENTRY_NAME);
@@ -206,7 +208,7 @@ int removeItem() {
 
 	// 3. shift queue items to the left by 1
 	for (i = 1; i++; i <= kitchenQueue.currentSize) {
-		kitchenQueue.queue[i - 1] = kitchenQueue[i];
+		kitchenQueue.queue[i - 1] = kitchenQueue.queue[i];
 	}	
 
 	// 4. return menuItem
