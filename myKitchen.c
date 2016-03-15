@@ -41,6 +41,7 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count,
 static int t_kitchen(void* data);
 void addItem(int menuItem);
 int removeItem(void);
+void checkArray(void); //for testing only
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // global variables ///////////////////////////////////////////////////////////////////////////////
@@ -114,27 +115,32 @@ ssize_t procfile_read(struct file *filp, char __user *buf, size_t count, loff_t 
    return ret;
 }
 
-ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
-{
-
-    char *page; /* don't touch */
+ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
+    char *page; 
     int my_data = 0;
     
-    /* Allocating kernel memory, don't touch. */
+    // 1. allocate kernal memory (no touch!)
     page = (char *) vmalloc(count);
     if (!page)
        return -ENOMEM;   
 
-    /* Copy the data from the user space.  Data is placed in page. */ 
+    // 2. Copy the data from the user space.  Data is placed in page. 
     if (copy_from_user(page, buf, count)) {
        vfree(page);
        return -EFAULT;
     }
 
-   /* Now do something with the data, here we just print it */
+	// 3. we will want to check user input so they can't enter in "echo pie > /proc/kitchen"
+
+    // 4. copy the kernel page into a variable we will use 
     sscanf(page,"%d",&my_data);
 
-	// determine user input	
+	// 5. check if the kitchen is full
+	if ((kitchenQueue.currentSize >= QUEUE_SIZE) && (my_data != STOP_KITCHEN) && (my_data != START_KITCHEN)) {
+		return -ENOMEM;
+	}
+
+	// 6. determine user input	
 	switch(my_data) {
 		case STOP_KITCHEN:
 			printk("I STARTED THE KITCHEN!\n");
@@ -144,15 +150,19 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 			break;
 		case CAESAR_SALAD:
 			printk("SALAADDD.jpg\n");
+			addItem(CAESAR_SALAD);
 			break;
 		case HAMBURGER:
 			printk("HAMBURGER.jpg\n");
+			addItem(HAMBURGER);
 			break;
 		case PERSONAL_PIZZA:
 			printk("PIZZA.txt\n");
+			addItem(PERSONAL_PIZZA);
 			break;
 		case BEEF_WELLINGTON:
 			printk("BEEF_WASHINGTON.jpg\n");
+			addItem(BEEF_WELLINGTON);
 			break;
 		default:
 			printk("WHAT THE HELL ARE YOU DOING?!.txt\n");
@@ -160,7 +170,8 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 	}
 
 	printk("User has sent the value of %d\n", my_data);
-    
+	printk("The currentSize = %d\n", kitchenQueue.currentSize);
+	checkArray();    
     /* Free the allocated memory, don't touch. */
     vfree(page); 
 
@@ -172,7 +183,8 @@ void hello_proc_exit(void)
 
    /* Will block here and wait until kthread stops */
    kthread_stop(t);
-
+	
+  
    remove_proc_entry(ENTRY_NAME, NULL);
    printk("Removing /proc/%s.\n", ENTRY_NAME);
 }
@@ -205,14 +217,23 @@ int removeItem() {
 
 	// 2. update the currentSize variable
 	kitchenQueue.currentSize--;	
-
+	
 	// 3. shift queue items to the left by 1
-	for (i = 1; i++; i <= kitchenQueue.currentSize) {
+	for (i = 1; i <= kitchenQueue.currentSize; i++) {
 		kitchenQueue.queue[i - 1] = kitchenQueue.queue[i];
 	}	
 
 	// 4. return menuItem
 	return menuItem;
+}
+
+// function for testing
+void checkArray() {
+	int i;
+	
+	for(i = 0; i < kitchenQueue.currentSize; i++) {
+		printk("Array at index %d: %d\n", i, kitchenQueue.queue[i]);
+	}
 }
 
 module_init(hello_proc_init);

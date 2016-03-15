@@ -1,2 +1,2 @@
 #!/bin/bash
-rmmod kitchen
+rmmod myKitchen.ko
