@@ -14,6 +14,7 @@ MODULE_LICENSE("GPL");  /* Kernel needs this license. */
 #define PARENT NULL
 
 #define QUEUE_SIZE 20
+
 #define STOP_KITCHEN -1
 #define START_KITCHEN 0
 #define CAESAR_SALAD 1
@@ -21,13 +22,19 @@ MODULE_LICENSE("GPL");  /* Kernel needs this license. */
 #define PERSONAL_PIZZA 3
 #define BEEF_WELLINGTON 4
 
+#define ACCESS_PENALTY 1
+#define SALAD_PROCESS_TIME 2
+#define HAMBURGER_PROCESS_TIME 3
+#define PIZZA_PROCESS_TIME 4
+#define BEEFWELL_PROCESS_TIME 8
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // type definitions ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct {
 	int queue[QUEUE_SIZE];			// a queue of menu items being processed 
 	int currentSize; 			// contains the current number of elements in the queue
-} specialQueue;
+} fifoQueue;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // function declarations //////////////////////////////////////////////////////////////////////////
@@ -41,6 +48,7 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count,
 static int t_kitchen(void* data);
 void addItem(int menuItem);
 int removeItem(void);
+void processItem(void);
 void checkArray(void); //for testing only
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,9 +59,9 @@ static struct file_operations hello_proc_ops = {
    .read = procfile_read,
    .write = procfile_write,
 };
-struct mutex myMutex;
+struct mutex queueMutex;
 struct task_struct *t; /* Printer thread task struct (use to start/stop)*/
-specialQueue kitchenQueue;
+fifoQueue kitchenQueue;
 
 /* The kitchen thread will run this function.  The thread will stop
  * when either kitchen_stop(t) is called or else the function ends. */
@@ -62,11 +70,14 @@ static int t_kitchen(void* data) {
 
    /* Print hello 50 times, then stop on it's own */
    while(!kthread_should_stop()) {
-      printk("Hello from the kitchen!  Run %i\n", i);
-
+		processItem();	
       /* Sleep one second */
       ssleep(1);
+	  printk("The currentSize = %d\n", kitchenQueue.currentSize);
+	  checkArray();
+	  printk("\n");    
       i++;
+	  
     }
 
    return 0;
@@ -76,7 +87,7 @@ static int t_kitchen(void* data) {
 int hello_proc_init(void) {
 
    proc_create_data(ENTRY_NAME, 0, NULL, &hello_proc_ops, NULL);
-   mutex_init(&myMutex);   
+   mutex_init(&queueMutex);   
    kitchenQueue.currentSize = 0;
 
    /* This message will print in /var/log/syslog or on the first tty. */
@@ -143,25 +154,25 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 	// 6. determine user input	
 	switch(my_data) {
 		case STOP_KITCHEN:
-			printk("I STARTED THE KITCHEN!\n");
+			printk("Kitchen stopped.\n");
 			break;
 		case START_KITCHEN:
-			printk("I STOPPED THE KITCHEN!\n");
+			printk("Kitched Started.\n");
 			break;
 		case CAESAR_SALAD:
-			printk("SALAADDD.jpg\n");
+			printk("Salad added to the queue.\n");
 			addItem(CAESAR_SALAD);
 			break;
 		case HAMBURGER:
-			printk("HAMBURGER.jpg\n");
+			printk("Hamburger added to the queue.\n");
 			addItem(HAMBURGER);
 			break;
 		case PERSONAL_PIZZA:
-			printk("PIZZA.txt\n");
+			printk("Pizza added to the queue\n");
 			addItem(PERSONAL_PIZZA);
 			break;
 		case BEEF_WELLINGTON:
-			printk("BEEF_WASHINGTON.jpg\n");
+			printk("Beef wellington added to the queue\n");
 			addItem(BEEF_WELLINGTON);
 			break;
 		default:
@@ -170,8 +181,6 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 	}
 
 	printk("User has sent the value of %d\n", my_data);
-	printk("The currentSize = %d\n", kitchenQueue.currentSize);
-	checkArray();    
     /* Free the allocated memory, don't touch. */
     vfree(page); 
 
@@ -196,10 +205,14 @@ void hello_proc_exit(void)
 // Description: adds an item to kitchenQueue and updates all relevant information in the struct //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void addItem(int menuItem) {
+	mutex_lock(&queueMutex);
+	//printk("I have locked to add an item!\n");
 	// 1. add the item to the queue
 	kitchenQueue.queue[kitchenQueue.currentSize] = menuItem;	
 	// 2. update currentSize variable
 	kitchenQueue.currentSize++;
+	mutex_unlock(&queueMutex);
+	//printk("I unlocked after adding an item!\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,6 +225,8 @@ int removeItem() {
 	int menuItem;	// menu item to be returned
 	int i; 			// looping variable
 
+	mutex_lock(&queueMutex);
+	//printk("I locked to remove an item!\n");
 	// 1. remove the item from the queue
 	menuItem = kitchenQueue.queue[0];
 
@@ -222,9 +237,51 @@ int removeItem() {
 	for (i = 1; i <= kitchenQueue.currentSize; i++) {
 		kitchenQueue.queue[i - 1] = kitchenQueue.queue[i];
 	}	
+	mutex_unlock(&queueMutex);
+	//printk("I unlocked after removing an item!\n");	
 
 	// 4. return menuItem
 	return menuItem;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Name: processItem()																						  //
+// In: none																									  //
+// Out: none																								  //
+// Description: takes care of processing the item by removing and waiting for the amount of time it takes  	  //
+// Notes: currently the sleep time is contained outside of a mutex, not sure if we should have it that way... //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void processItem() {
+	int menuItem; // integer value of item being processed
+
+	//printk("Trying to process an item\n");	
+	// 1. remove first item from queue
+	if (kitchenQueue.currentSize > 0) {
+		menuItem = removeItem();
+	}
+
+	// 2. determine the time it takes to process the food and sleep for that time
+	switch(menuItem) {
+		case CAESAR_SALAD:
+			printk("Processing salad... takes %d seconds\n", SALAD_PROCESS_TIME);
+			ssleep(SALAD_PROCESS_TIME);
+			break;
+		case HAMBURGER:
+			printk("Processing hamburger... takes %d seconds\n", HAMBURGER_PROCESS_TIME);
+			ssleep(HAMBURGER_PROCESS_TIME);
+			break;
+		case PERSONAL_PIZZA:
+			printk("Processing pizza... takes %d seconds\n", PIZZA_PROCESS_TIME);
+			ssleep(PIZZA_PROCESS_TIME);
+			break;
+		case BEEF_WELLINGTON:
+			printk("Processing beef wellington... takes %d seconds\n", BEEFWELL_PROCESS_TIME);
+			ssleep(BEEFWELL_PROCESS_TIME);
+			break;
+		default:
+			printk("Nothing was in the queue!\n");	
+			break;
+	}
 }
 
 // function for testing
