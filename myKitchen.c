@@ -33,23 +33,24 @@ MODULE_LICENSE("GPL");  /* Kernel needs this license. */
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 typedef struct {
 	int queue[QUEUE_SIZE];			// a queue of menu items being processed 
-	int currentSize; 			// contains the current number of elements in the queue
+	int currentSize; 				// contains the current number of elements in the queue
+	int saladCount;					// contains current number of salads in queue
+	int hamburgerCount;				// contains current number of burgers in queue
+	int pizzaCount;					// contains current number of pizzas in queue
+	int beefWellCount;				// contains current number of beef wellingtons in queue
 } fifoQueue;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // function declarations //////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-ssize_t procfile_read(struct file *filp, char __user *buf, size_t count,
-                loff_t *f_pos);
-
-ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count,
-                loff_t *f_pos);
-
+ssize_t procfile_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
+ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
 static int t_kitchen(void* data);
 void addItem(int menuItem);
 int removeItem(void);
 void processItem(void);
 void checkArray(void); //for testing only
+void printQueueData(void); //for testing only
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // global variables ///////////////////////////////////////////////////////////////////////////////
@@ -59,6 +60,7 @@ static struct file_operations hello_proc_ops = {
    .read = procfile_read,
    .write = procfile_write,
 };
+
 struct mutex queueMutex;
 struct task_struct *t; /* Printer thread task struct (use to start/stop)*/
 fifoQueue kitchenQueue;
@@ -68,13 +70,15 @@ fifoQueue kitchenQueue;
 static int t_kitchen(void* data) {
    int i=0;
 
-   /* Print hello 50 times, then stop on it's own */
    while(!kthread_should_stop()) {
-		processItem();	
-      /* Sleep one second */
+	 // 1. do array penalty
       ssleep(1);
+
+	 // 2. process item in queue
+	  processItem();	
 	  printk("The currentSize = %d\n", kitchenQueue.currentSize);
 	  checkArray();
+	  printQueueData();
 	  printk("\n");    
       i++;
 	  
@@ -87,14 +91,19 @@ static int t_kitchen(void* data) {
 int hello_proc_init(void) {
 
    proc_create_data(ENTRY_NAME, 0, NULL, &hello_proc_ops, NULL);
-   mutex_init(&queueMutex);   
+   mutex_init(&queueMutex);
+   
+   // 1. initialize the queue data   
    kitchenQueue.currentSize = 0;
-
+   kitchenQueue.saladCount = 0;
+   kitchenQueue.hamburgerCount = 0;
+   kitchenQueue.pizzaCount = 0;
+   kitchenQueue.beefWellCount = 0;
+	
    /* This message will print in /var/log/syslog or on the first tty. */
    printk("/proc/%s created\n", ENTRY_NAME);
 
    /* Start the printer -- move out of here later. */
-   t = kthread_run(t_kitchen, NULL, "kitchen_thread");
 
 
    return 0;
@@ -118,7 +127,7 @@ ssize_t procfile_read(struct file *filp, char __user *buf, size_t count, loff_t 
    /* This message will print in /var/log/syslog or on the first tty. */
    printk("/proc/%s read called.\n", ENTRY_NAME);
 
-   ret=sprintf(ret_buf, "Kitchen read called.\n");
+   ret=sprintf(ret_buf, "Kitchen is %s. Processing %s at slot %d. Total processed is %d.\n", "running", "nothing", 2, 4);
    if(copy_to_user(buf, ret_buf, ret)) {
       ret = -EFAULT;  
    }
@@ -154,10 +163,12 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 	// 6. determine user input	
 	switch(my_data) {
 		case STOP_KITCHEN:
+			kthread_stop(t);
 			printk("Kitchen stopped.\n");
 			break;
 		case START_KITCHEN:
 			printk("Kitched Started.\n");
+   			t = kthread_run(t_kitchen, NULL, "kitchen_thread");
 			break;
 		case CAESAR_SALAD:
 			printk("Salad added to the queue.\n");
@@ -191,8 +202,7 @@ void hello_proc_exit(void)
 {
 
    /* Will block here and wait until kthread stops */
-   kthread_stop(t);
-	
+	kthread_stop(t);
   
    remove_proc_entry(ENTRY_NAME, NULL);
    printk("Removing /proc/%s.\n", ENTRY_NAME);
@@ -206,13 +216,27 @@ void hello_proc_exit(void)
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void addItem(int menuItem) {
 	mutex_lock(&queueMutex);
-	//printk("I have locked to add an item!\n");
-	// 1. add the item to the queue
+	// 1. increment menuItemCount
+	switch(menuItem) {
+		case CAESAR_SALAD:
+		    kitchenQueue.saladCount++;	
+			break;
+		case HAMBURGER:
+		    kitchenQueue.hamburgerCount++;	
+			break;
+		case PERSONAL_PIZZA:
+		    kitchenQueue.pizzaCount++;	
+			break;
+		case BEEF_WELLINGTON:
+		    kitchenQueue.beefWellCount++;	
+			break;
+	}
+
+	// 2. add the item to the queue
 	kitchenQueue.queue[kitchenQueue.currentSize] = menuItem;	
-	// 2. update currentSize variable
+	// 3. update currentSize variable
 	kitchenQueue.currentSize++;
 	mutex_unlock(&queueMutex);
-	//printk("I unlocked after adding an item!\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -229,6 +253,23 @@ int removeItem() {
 	//printk("I locked to remove an item!\n");
 	// 1. remove the item from the queue
 	menuItem = kitchenQueue.queue[0];
+
+	// 1. decrement the menuItem count
+	switch(menuItem) {
+		case CAESAR_SALAD:
+			kitchenQueue.saladCount--;
+			break;
+		case HAMBURGER:
+			kitchenQueue.hamburgerCount--;
+			break;
+		case PERSONAL_PIZZA:
+			kitchenQueue.pizzaCount--;
+			break;
+		case BEEF_WELLINGTON:
+			kitchenQueue.beefWellCount--;
+			break;
+	}
+
 
 	// 2. update the currentSize variable
 	kitchenQueue.currentSize--;	
@@ -284,13 +325,20 @@ void processItem() {
 	}
 }
 
-// function for testing
+// functions for testing
 void checkArray() {
 	int i;
 	
 	for(i = 0; i < kitchenQueue.currentSize; i++) {
 		printk("Array at index %d: %d\n", i, kitchenQueue.queue[i]);
 	}
+}
+
+void printQueueData() {
+	printk("Salad Count = %d\n", kitchenQueue.saladCount);
+	printk("Burger Count = %d\n", kitchenQueue.hamburgerCount);
+	printk("Pizza Count = %d\n", kitchenQueue.pizzaCount);
+	printk("Beef Wellington Count = %d\n", kitchenQueue.beefWellCount);
 }
 
 module_init(hello_proc_init);
