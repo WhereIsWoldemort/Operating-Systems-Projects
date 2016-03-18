@@ -71,8 +71,8 @@ static int t_kitchen(void* data) {
    int i=0;
 
    while(!kthread_should_stop()) {
-	 // 1. do array penalty
-      ssleep(1);
+	 // 1. process queue view penalty
+      ssleep(ACCESS_PENALTY);
 
 	 // 2. process item in queue
 	  processItem();	
@@ -200,9 +200,11 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 
 void hello_proc_exit(void)
 {
-
+	
    /* Will block here and wait until kthread stops */
-	kthread_stop(t);
+   // the program appeared to block here whenever I tried to remove 
+	//printk("I would like to shut this thread down\n");
+   	//kthread_stop(t);
   
    remove_proc_entry(ENTRY_NAME, NULL);
    printk("Removing /proc/%s.\n", ENTRY_NAME);
