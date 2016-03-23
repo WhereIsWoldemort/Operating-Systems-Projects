@@ -64,11 +64,13 @@ static struct file_operations hello_proc_ops = {
 struct mutex queueMutex;
 struct task_struct *t; /* Printer thread task struct (use to start/stop)*/
 fifoQueue kitchenQueue;
+int itemsProcessed;
+char* kitchenState;			
+char* itemBeingProcessed; // string that hold the current item being processed
 
 /* The kitchen thread will run this function.  The thread will stop
  * when either kitchen_stop(t) is called or else the function ends. */
 static int t_kitchen(void* data) {
-   int i=0;
 
    while(!kthread_should_stop()) {
 	 // 1. process queue view penalty
@@ -78,9 +80,8 @@ static int t_kitchen(void* data) {
 	  processItem();	
 	  printk("The currentSize = %d\n", kitchenQueue.currentSize);
 	  checkArray();
-	  printQueueData();
-	  printk("\n");    
-      i++;
+	  //printQueueData();
+	  //printk("\n");    
 	  
     }
 
@@ -99,6 +100,12 @@ int hello_proc_init(void) {
    kitchenQueue.hamburgerCount = 0;
    kitchenQueue.pizzaCount = 0;
    kitchenQueue.beefWellCount = 0;
+
+
+   // 2. initalize global variables
+   kitchenState = "not running";
+   itemsProcessed = 0;
+   itemBeingProcessed = "nothing";
 	
    /* This message will print in /var/log/syslog or on the first tty. */
    printk("/proc/%s created\n", ENTRY_NAME);
@@ -127,7 +134,7 @@ ssize_t procfile_read(struct file *filp, char __user *buf, size_t count, loff_t 
    /* This message will print in /var/log/syslog or on the first tty. */
    printk("/proc/%s read called.\n", ENTRY_NAME);
 
-   ret=sprintf(ret_buf, "Kitchen is %s. Processing %s at slot %d. Total processed is %d.\n", "running", "nothing", 2, 4);
+   ret=sprintf(ret_buf, "Kitchen is %s. Processing %s at slot %d. Total processed is %d.\n", kitchenState, itemBeingProcessed, 0, itemsProcessed);
    if(copy_to_user(buf, ret_buf, ret)) {
       ret = -EFAULT;  
    }
@@ -164,9 +171,11 @@ ssize_t procfile_write(struct file *filp, const char __user *buf, size_t count, 
 	switch(my_data) {
 		case STOP_KITCHEN:
 			kthread_stop(t);
+			kitchenState = "not running";
 			printk("Kitchen stopped.\n");
 			break;
 		case START_KITCHEN:
+			kitchenState = "running";
 			printk("Kitched Started.\n");
    			t = kthread_run(t_kitchen, NULL, "kitchen_thread");
 			break;
@@ -217,25 +226,37 @@ void hello_proc_exit(void)
 // Description: adds an item to kitchenQueue and updates all relevant information in the struct //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void addItem(int menuItem) {
+	int indexOfInsertion; 
+	int i; 					// looping variable
+
 	mutex_lock(&queueMutex);
 	// 1. increment menuItemCount
 	switch(menuItem) {
 		case CAESAR_SALAD:
-		    kitchenQueue.saladCount++;	
+			indexOfInsertion = kitchenQueue.saladCount;
+		    kitchenQueue.saladCount++;				
 			break;
 		case HAMBURGER:
+			indexOfInsertion = kitchenQueue.saladCount + kitchenQueue.hamburgerCount;	
 		    kitchenQueue.hamburgerCount++;	
 			break;
 		case PERSONAL_PIZZA:
+			indexOfInsertion = kitchenQueue.saladCount + kitchenQueue.hamburgerCount + kitchenQueue.pizzaCount;
 		    kitchenQueue.pizzaCount++;	
 			break;
 		case BEEF_WELLINGTON:
+			indexOfInsertion = kitchenQueue.saladCount + kitchenQueue.hamburgerCount + kitchenQueue.pizzaCount + kitchenQueue.beefWellCount;
 		    kitchenQueue.beefWellCount++;	
 			break;
 	}
 
+	// 2. shift values to the right of index of insertion to the right
+	for (i = kitchenQueue.currentSize-1; i >= indexOfInsertion; i--) {
+		kitchenQueue.queue[i+1] = kitchenQueue.queue[i];
+	}	
+
 	// 2. add the item to the queue
-	kitchenQueue.queue[kitchenQueue.currentSize] = menuItem;	
+	kitchenQueue.queue[indexOfInsertion] = menuItem;	
 	// 3. update currentSize variable
 	kitchenQueue.currentSize++;
 	mutex_unlock(&queueMutex);
@@ -301,27 +322,33 @@ void processItem() {
 	// 1. remove first item from queue
 	if (kitchenQueue.currentSize > 0) {
 		menuItem = removeItem();
+		itemsProcessed++;
 	}
 
 	// 2. determine the time it takes to process the food and sleep for that time
 	switch(menuItem) {
 		case CAESAR_SALAD:
+			itemBeingProcessed = "Caesar salad";
 			printk("Processing salad... takes %d seconds\n", SALAD_PROCESS_TIME);
 			ssleep(SALAD_PROCESS_TIME);
 			break;
 		case HAMBURGER:
+			itemBeingProcessed = "hamburger";
 			printk("Processing hamburger... takes %d seconds\n", HAMBURGER_PROCESS_TIME);
 			ssleep(HAMBURGER_PROCESS_TIME);
 			break;
 		case PERSONAL_PIZZA:
+			itemBeingProcessed = "personal pizza";
 			printk("Processing pizza... takes %d seconds\n", PIZZA_PROCESS_TIME);
 			ssleep(PIZZA_PROCESS_TIME);
 			break;
 		case BEEF_WELLINGTON:
+			itemBeingProcessed = "beef wellington";
 			printk("Processing beef wellington... takes %d seconds\n", BEEFWELL_PROCESS_TIME);
 			ssleep(BEEFWELL_PROCESS_TIME);
 			break;
 		default:
+			itemBeingProcessed = "nothing";
 			printk("Nothing was in the queue!\n");	
 			break;
 	}
