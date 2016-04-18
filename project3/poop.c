@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <math.h>
 
 //////////////////////////////////////////////////////
 // MACROS ////////////////////////////////////////////
@@ -111,6 +112,7 @@ uint16_t	rootEntryCount;			// the number of entries in the root directory (shoul
 uint32_t 	totalSectors;			// the total number of sectors in this volume
 uint32_t 	rootDirectorySectors; 	// number of sectors in the root directory
 uint32_t	firstDataSector;		// the first sector of data in the data region of the file system
+uint64_t 	currentDirectory;		// stores the byte address of the current directory
 
 //////////////////////////////////////////////////////////
 // FUNCTION PROTOTYPES ///////////////////////////////////
@@ -127,6 +129,7 @@ uint32_t getFirstDataSector();
 uint32_t getFirstSectorOfCluster(uint32_t numOfCluster);
 uint32_t getThisFATSectorNumber(uint32_t numOfCluster);
 uint16_t getThisFATEntryOffset(uint32_t numOfCluster);
+uint64_t convertSectorNumToBytes(uint32_t sectorNumber);
 fileData getFileData(uint64_t byteAddress);
 
 date convertToDateStruct(uint16_t machineRepresentation);
@@ -138,9 +141,9 @@ time convertToTimeStruct(uint16_t machineRepresentation);
 int main(int argc, char *argv[])
 {
 	char 		cmd_line[MAX_CMD];		// command line container for our file system shell
-	uint32_t 	fatSectorNumber;
-	uint16_t 	fatEntryOffset;
-
+	uint32_t 	fatSectorNumber;		//TODO add comment
+	uint16_t 	fatEntryOffset;			//
+	uint32_t 	rootFirstSectorNum;		//
 
 	/* Parse args and open our image file */
 	if (argc != 2) {
@@ -201,7 +204,9 @@ int main(int argc, char *argv[])
 	printf("Cluster %d is located in sector %d of the FAT and has an offset of %d within that sector.\n", 129, fatSectorNumber, fatEntryOffset);
 	
 	/* Get root directory address */
-	//printf("Root addr is 0x%x\n", root_addr);
+	rootFirstSectorNum = getFirstSectorOfCluster(rootClusterNum);
+	currentDirectory = convertSectorNumToBytes(rootFirstSectorNum);
+	printf("Root addr is 0x%x\n", currentDirectory);
 
 
 	/* Main loop.  You probably want to create a helper function
@@ -225,8 +230,11 @@ int main(int argc, char *argv[])
 			printStats();
 		}
 
-		else if(strncmp(cmd_line,"cd",2)==0) {
-			changeDirectory();
+		else if(strncmp(cmd_line,"cd",2)==0) {	
+			//TODO: Handle dumbasses
+			strtok(cmd_line, " ");
+			changeDirectory(strtok(NULL, " "));
+			printf("%d", currentDirectory);
 		}
 		else if(strncmp(cmd_line,"ls",2)==0) {
 			listFiles();
@@ -246,7 +254,7 @@ int main(int argc, char *argv[])
 
 	}
 
-	/* Close the file */
+	/* Close the file/
 	fclose(filePtr);
 
 	return 0; /* Success */
@@ -320,16 +328,82 @@ void printStats() {
 // Out: 	none
 // Purpose:
 // Notes:
-void changeDirectory() {
+void changeDirectory(char* directory ) {
 	printf("Going to cd!\n");
+
+	int cwdSet = 0;
+	uint64_t byteAddress;	
+	fileData thisFileData;
+
+	// set byte address
+	byteAddress = currentDirectory;	
+
+	// get file entry data structure at byte adress
+	thisFileData = getFileData(byteAddress);
+
+	// while the first character of the fileName in file entry structure is not '\0'
+	while (thisFileData.fileName[0] != '\0') {
+			
+		// print the fileName
+		if (thisFileData.fileName[0] != -27) { 
+			//TODO: Why is there a magic humber?!?!?!?!?!
+			if (strncmp(thisFileData.fileName, directory, strlen(directory) - 2) == 0)
+			{
+				currentDirectory = thisFileData.firstClusterNumHI;
+				currentDirectory = currentDirectory << 16;
+				currentDirectory += thisFileData.firstClusterNumLO;
+				currentDirectory = getFirstSectorOfCluster(currentDirectory);
+				currentDirectory = convertSectorNumToBytes(currentDirectory);	
+				cwdSet = 1;
+				break;
+			}  
+		}
+
+		// get new byte address
+		byteAddress += 64;	
+
+		// get file entry data structure at new byte address
+		thisFileData = getFileData(byteAddress);
+	}
+
+	if (cwdSet==0)
+	{
+		printf("Error: The entered directory does not exist\n");
+	}	
 }
+
 
 // In: 
 // Out: none
 // Purpose:
 // Notes:
 void listFiles() {
+	uint64_t byteAddress; 		// holds the address of the directory entry we are accessing
+	fileData thisFileData;		// holds the current file data (metadata!)
+
 	printf("Going to ls.\n");
+	// set byte address
+	byteAddress = currentDirectory;	
+	printf("WHAT THE HELL IS the STARTING BYTE ADDRESS? %d\n", byteAddress);
+
+	// get file entry data structure at byte adress
+	thisFileData = getFileData(byteAddress);
+
+	// while the first character of the fileName in file entry structure is not '\0'
+	while (thisFileData.fileName[0] != '\0') {
+			
+		// print the fileName
+		if (thisFileData.fileName[0] != -27) { 
+			//TODO: Why is there a magic number??!?!?!?!?
+			printf("%s\n", thisFileData.fileName); 
+		}
+
+		// get new byte address
+		byteAddress += 64;	
+
+		// get file entry data structure at new byte address
+		thisFileData = getFileData(byteAddress);
+	}
 }
 
 // In: 
@@ -396,6 +470,7 @@ fileData getFileData(uint64_t byteAddress) {
 
 	// 2. get the directory name
 	fread(&(thisFileData.fileName), READ_RESOLUTION, DN_SIZE, filePtr);
+	thisFileData.fileName[SH_DIRNAME_SIZE] = '\0';
 	
 	// 3. get the file attributes
 	fread(&(thisFileData.fileAttributes), READ_RESOLUTION, DA_SIZE, filePtr);
@@ -511,3 +586,7 @@ time convertToTimeStruct(uint16_t machineRepresentation) {
 
 	return thisTime;
 }
+
+uint64_t convertSectorNumToBytes(uint32_t sectorNumber) {
+	return sectorNumber * bytesPerSector;
+} 
