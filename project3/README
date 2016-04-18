@@ -1,0 +1,11 @@
+> Authors: Kaleb Luse and Ethan Morisette
+> Files:
+    > fat32.img      -> the file system image we are using our utility on
+    > fat32_reader.c -> the program to run our file system utility (MAIN PROGRAM)
+> Instructions to run and compile
+    1. cd into directory containing both files listed above
+    2. run the command "gcc fat32_reader.c -o fat32_reader" to compile
+    3. run the program by typing "./fat_reader"
+> Challenges
+    > Our biggest challenges resided in the implementation of ls because it we were getting results we didn't expect. Hexedit did help, but we still had a hard time figuring out why certain things are compiling. The discussion on class on Monday about directory entries with long names, helped us to understand why this is happenening and what we need to do to handle it.
+    
