@@ -137,6 +137,12 @@ BOOL isEndOfDirectory(fileData thisFileData);
 // Notes: 		this applies to directories/files that were deleted
 BOOL isEmptyDirectoryEntry(fileData thisFileData); 
 
+// In:			filePtr (FILE*), directoryName (char*), directoryAddress (uint64_t)
+// Out:			boolean
+// Purpose:		to determine if a file exists in the current directory
+// Notes: 		this applies to directories/files that were deleted
+uint64_t checkFileExists(FILE* filePtr, char* directoryName, uint64_t directoryAddress);
+
 // In:			thisFileData (fileData (struct))
 // Out: 		boolean
 // Purpose:		to determine if the current file directory is a file
@@ -173,7 +179,7 @@ time getWriteTime(fileData thisFileData);
 // Notes: 
 date getWriteDate(fileData thisFileData); 
 
-// In:			thisFileData (fileData (struct))
+// In:			machineRepresentation (uint16_t)
 // Out: 		thisDate (date (struct))
 // Purpose: 	to convert the machine representation of the date into a human readable date
 // Notes:		specific bits are extracted through shifting and using & for masking
@@ -184,6 +190,8 @@ date convertToDateStruct(uint16_t machineRepresentation);
 // Purpose: 	to convert the machine representation of a time to a human-readable version
 // Notes:		same logic as convertToDateStruct
 time convertToTimeStruct(uint16_t machineRepresentation);
+
+
 
 
 

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/types.h>
+#include <string.h>
 #include "directory_entries.h"
 
 fileData getFileData(FILE* filePtr, uint64_t byteAddress) {
@@ -133,6 +134,33 @@ BOOL isEmptyDirectoryEntry(fileData thisFileData) {
 	}
 }
 
+uint64_t checkFileExists(FILE* filePtr, char* directoryName , uint64_t directoryAddress) {
+	fileData thisFileData;	
+
+	// get file entry data structure at byte adress
+	thisFileData = getFileData(filePtr, directoryAddress);
+
+	//Loop until we have found the end of the directory
+	while (!isEndOfDirectory(thisFileData)) {
+		//Make sure the directory or file we are looking at is not free, a long name, or a volume.
+		if (!isEmptyDirectoryEntry(thisFileData) && !isLongName(thisFileData) && !isVolumeLabel(thisFileData)) { 
+
+			if (strncmp(thisFileData.fileName, directoryName, strlen(directoryName) - 2) == 0)
+			{
+				return directoryAddress;
+			}  
+		}
+
+		// get new byte address
+		directoryAddress += 32;	
+
+		// get file entry data structure at new byte address
+		thisFileData = getFileData(filePtr, directoryAddress);
+	}
+
+	return -1;
+}
+
 uint32_t getFirstClusterOfEntry(fileData thisFileData) {
 	
 	uint32_t firstClusterEntry;
@@ -149,6 +177,12 @@ uint32_t getFirstClusterOfEntry(fileData thisFileData) {
 
 	//Convert the cluster num into a byte format
 	firstClusterEntry = convertSectorNumToBytes(firstClusterEntry);	
+}
+
+time getCreateTime(fileData thisFileData) {
+	time thisTime;
+
+	return thisTime;
 }
 
 date convertToDateStruct(uint16_t machineRepresentation) {
@@ -218,5 +252,7 @@ time convertToTimeStruct(uint16_t machineRepresentation) {
 
 	return thisTime;
 }
+
+
 
 

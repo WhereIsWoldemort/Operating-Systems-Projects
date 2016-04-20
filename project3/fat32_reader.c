@@ -26,23 +26,22 @@
 #define TRUE 1
 #define FALSE 0
 #define MAX_CMD 80
-#define DIR_ENTRY_SIZE	32		// the size of each entry within a directory in bytes
 
 //////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////
 //////////////////////////////////////////////////////////
 FILE* 		filePtr;				// pointer to the fat32 image file
 bootSector  thisBootSector;
-uint64_t 	currentDirectory;		// stores the byte address of the current directory
+uint64_t 	currentByteAddress;		// stores the byte address of the current directory
 
 //////////////////////////////////////////////////////////
 // FUNCTION PROTOTYPES ///////////////////////////////////
 //////////////////////////////////////////////////////////
 void printInfo();
 void printVolumeName();
-void printStats();
+void printStats(char* fileName);
 void listFiles();
-void changeDirectory();
+void changeDirectory(char* directory);
 void readFile();
 
 /* This is the main function of your project, and it will be run
@@ -70,8 +69,8 @@ int main(int argc, char *argv[])
 
 	/* Get root directory address */
 	rootFirstSectorNum = getFirstSectorOfCluster(thisBootSector, thisBootSector.rootClusterNum);
-	currentDirectory = convertSectorNumToBytes(thisBootSector, rootFirstSectorNum);
-	printf("Root addr is 0x%x\n", currentDirectory);
+	currentByteAddress = convertSectorNumToBytes(thisBootSector, rootFirstSectorNum);
+	printf("Root addr is hex: 0x%x, dec: %d\n", currentByteAddress, currentByteAddress);
 
 
 	/* Main loop.  You probably want to create a helper function
@@ -92,14 +91,15 @@ int main(int argc, char *argv[])
 		}
 		
 		else if(strncmp(cmd_line,"stat",4)==0) {
-			printStats();
+			strtok(cmd_line, " ");
+			printStats(strtok(NULL, " "));
 		}
 
 		else if(strncmp(cmd_line,"cd",2)==0) {	
 			//TODO: Handle dumbasses
 			strtok(cmd_line, " ");
 			changeDirectory(strtok(NULL, " "));
-			printf("%d", currentDirectory);
+			printf("%d", currentByteAddress);
 		}
 		else if(strncmp(cmd_line,"ls",2)==0) {
 			listFiles();
@@ -144,10 +144,10 @@ void printInfo() {
 	printf("First Data Sector in Bytes      => hex: 0x%08x dec: %d\n\n", thisBootSector.firstDataSector * thisBootSector.bytesPerSector, thisBootSector.firstDataSector * thisBootSector.bytesPerSector);
 }
 
-// In:		rootCluster (uint32_t), bytesPerSector (uint16_t), sectorsPerCluster (uint8_t), firstDataSector (uint32_t)
-// Out: 	none
-// Purpose: to print the volume name
-// Notes: 	found in the root directory entry
+// In:			none
+// Out: 		none
+// Purpose: 	to print the volume name 
+// Notes: 		found in the root directory entry
 void printVolumeName() {
 	uint64_t byteAddress; 				// the byte address of the first sector of the root cluster
 	uint32_t sectorNumber;				// the sector number of the first sector of a cluster
@@ -179,24 +179,51 @@ void printVolumeName() {
 	}		
 }
 
-// In: 
-// Out: 	none
-// Purpose:
-// Notes:
-void printStats(/* file name */) {
-	printf("Going to stat!\n");
-	// check if the file name exists
-	
-	// if the file exists print out the contents of the associated directory entry
+// In: 			fileName (string)
+// Out: 		none
+// Purpose:		to print out stats about a give file
+// Notes:		
+void printStats(char* fileName) {
+	fileData thisFileData;
+	uint64_t byteAddress;	// the byte address of the given fileName, -1 if that fileName is not in the current directory
+	date thisCreateDate;
+	time thisCreateTime;
+	date thisLastAccessDate;
+	date thisWriteDate;
+	time thisWriteTime;	
 
+	// check if the file name exists
+	byteAddress = checkFileExists(filePtr, fileName, currentByteAddress);
+	
 	// if the file does not exist, tell the user this
+	// if the file exists print out the contents of the associated directory entry
+	if (byteAddress == -1) {	
+		printf("That file does not exist in this directory.\n");
+	}
+	else {
+	/*	thisFileData 		= getFileData(filePtr, byteAddress);
+		thisCreateDate 		= getCreateDate(thisFileData);
+		thisCreateTime 		= getCreateTime(thisFileData);
+		thisLastAccessDate 	= getLastAccessDate(thisFileData);
+		thisWriteDate		= getWriteDate(thisFileData);
+		thisWriteTime		= getWriteTime(thisFileData);
+
+		printf("File Name: %s\n", thisFileData.fileName);
+		printf("File Attributes: %d\n", thisFileData.fileAttributes);
+		printf("Create Date: %d-%d-%d\n", thisCreateDate.month, thisCreateDate.day, thisCreateDate.year); 			
+		printf("Create Time: %2d:%2d:%2d\n", thisCreateTime.hours, thisCreateTime.minutes, thisCreateTime.seconds);
+		printf("Last Access Date: %d-%d-%d\n", thisLastAccessDate.month, thisLastAccessDate.day, thisLastAccessDate.year); 			
+		printf("Last Write Date: %d-%d-%d\n", thisWriteDate.month, thisWriteDate.day, thisWriteDate.year); 			
+		printf("Write Time: %2d:%2d:%2d\n", thisWriteTime.hours, thisWriteTime.minutes, thisWriteTime.seconds);
+	*/	
+	}
 }
 
-// In: 
-// Out: 	none
+// In: 			directory (string)
+// Out: 		none
 // Purpose:
 // Notes:
-void changeDirectory(char* directory ) {
+void changeDirectory(char* directory) {
 	printf("Going to cd!\n");
 
 	int cwdSet = 0;
@@ -204,7 +231,7 @@ void changeDirectory(char* directory ) {
 	fileData thisFileData;
 
 	// set byte address
-	byteAddress = currentDirectory;	
+	byteAddress = currentByteAddress;	
 
 	// get file entry data structure at byte adress
 	thisFileData = getFileData(filePtr, byteAddress);
@@ -216,11 +243,11 @@ void changeDirectory(char* directory ) {
 		if (!isEmptyDirectoryEntry(thisFileData)) { 
 			if (strncmp(thisFileData.fileName, directory, strlen(directory) - 2) == 0)
 			{
-				currentDirectory = thisFileData.firstClusterNumHI;
-				currentDirectory = currentDirectory << 16;
-				currentDirectory += thisFileData.firstClusterNumLO;
-				currentDirectory = getFirstSectorOfCluster(thisBootSector, currentDirectory);
-				currentDirectory = convertSectorNumToBytes(thisBootSector, currentDirectory);	
+				currentByteAddress = thisFileData.firstClusterNumHI;
+				currentByteAddress = currentByteAddress << 16;
+				currentByteAddress += thisFileData.firstClusterNumLO;
+				currentByteAddress = getFirstSectorOfCluster(thisBootSector, currentByteAddress);
+				currentByteAddress = convertSectorNumToBytes(thisBootSector, currentByteAddress);	
 				cwdSet = 1;
 				break;
 			}  
@@ -249,7 +276,7 @@ void listFiles() {
 
 	printf("Going to ls.\n");
 	// set byte address
-	byteAddress = currentDirectory;	
+	byteAddress = currentByteAddress;	
 
 	// get file entry data structure at byte adress
 	thisFileData = getFileData(filePtr, byteAddress);

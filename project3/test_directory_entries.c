@@ -23,6 +23,11 @@ void testIsFile(int testNumber);
 void testIsVolumeLabel(int testNumber);
 void testIsReadOnly(int testNumber);
 void testGetFirstClusterOfEntry(int testNumber);
+void testGetCreateTime(int testNumber);
+void testGetCreateDate(int testNumber);
+void testGetLastAccessDate(int testNumber);
+void testGetWriteTime(int testNumber);
+void testGetWriteDate(int testNumber);
 
 //////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////////
@@ -257,3 +262,6 @@ void testIsLongName(int testNumber) {
 	} 
 }
 
+void testGetCreateTime() {
+
+}
