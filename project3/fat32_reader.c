@@ -72,6 +72,36 @@
 #define DIR_ENTRY_SIZE	32		// the size of each entry within a directory in bytes
 #define EPOCH_YEAR 		1980	// the year that all years are calculated from in fat32			
 
+/////////////////////////////////////////////////////////////////////////////
+// TYPE DEFINITONS //////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+	char 		fileName[SH_DIRNAME_SIZE+1]; 	// the name of the file
+	uint8_t		fileAttributes;					// all attributes associated with file
+	uint16_t	createTime;						// time file was created
+	uint16_t	createDate;						// date file was created
+	uint16_t	lastAccessDate;					// date file was last accessed
+	uint16_t	firstClusterNumHI;				// the higher value word of the first cluster number
+	uint16_t	writeTime;						// time file was last written to
+	uint16_t	writeDate;						// date file was last written to
+	uint16_t	firstClusterNumLO;				// the lower value word of the first cluster number
+	uint32_t	fileSize;						// the size of the file in bytes
+	uint64_t	byteAddress;					// holds the byte address of the directory entry structure
+} fileData;
+
+typedef struct {
+	int day;
+	int month;
+	int year;
+} date;
+
+typedef struct {
+	int hours;
+	int minutes;
+	int seconds;
+} time;
+
 //////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////
 //////////////////////////////////////////////////////////

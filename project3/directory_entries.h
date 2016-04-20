@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////
 // INCLUDES ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-#include <sys/types.h>
+#include <stdint.h>
 
 ////////////////////////////////////////////////////////////////////////////
 // MACROS //////////////////////////////////////////////////////////////////
@@ -19,13 +19,34 @@
 	#define FALSE 0
 #endif
 
+#define DN_OFFSET		0		// directory name
+#define DN_SIZE			11
+#define DA_OFFSET		11		// directory attributes
+#define DA_SIZE			1	
+#define DCT_OFFSET		14		// create time
+#define DCT_SIZE		2
+#define DCD_OFFSET		16		// create date 
+#define DCD_SIZE		2
+#define DLAD_OFFSET		18		// last access date
+#define DLAD_SIZE		2
+#define DFCH_OFFSET		20		// first cluster number high order word
+#define DFCH_SIZE		2
+#define DWT_OFFSET		22		// write time
+#define DWT_SIZE		2
+#define DWD_OFFSET		24		// write date
+#define DWD_SIZE		2
+#define DFCL_OFFSET		26		// first cluster number low order word
+#define DFCL_SIZE		2
+#define DFS_OFFSET		28		// file size
+#define DFS_SIZE		4
+#define SH_FILE_NAME	11		// short file name size in characters 
 
 /////////////////////////////////////////////////////////////////////////////
 // TYPE DEFINITONS //////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	char 		fileName[SH_DIRNAME_SIZE+1]; 	// the name of the file
+	char 		fileName[SH_FILE_NAME+1];	 	// the name of the file
 	uint8_t		fileAttributes;					// all attributes associated with file
 	uint16_t	createTime;						// time file was created
 	uint16_t	createDate;						// date file was created
