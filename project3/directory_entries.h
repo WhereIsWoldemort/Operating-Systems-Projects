@@ -1,6 +1,3 @@
-////////////////////////////////////////////////////////////////////////////
-// INCLUDES ////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
 #include <stdint.h>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -41,6 +38,11 @@
 #define DFS_SIZE		4
 #define SH_FILE_NAME	11		// short file name size in characters 
 
+#define READ_RESOLUTION	1		// the resolution we want to read at in bytes
+#define SH_DIRNAME_SIZE	11		// the number of characters in a short directory name
+#define DIR_ENTRY_SIZE	32		// the size of each entry within a directory in bytes
+#define EPOCH_YEAR 		1980	// the year that all years are calculated from in fat32	
+
 /////////////////////////////////////////////////////////////////////////////
 // TYPE DEFINITONS //////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -79,25 +81,37 @@ typedef struct {
 // Out: 	thisFileData (fileData (struct))
 // Purpose: to place all file metadata based on a byte address in a struct and return it
 // Note: 	handles file metadata blocks that are 32 bits (4 bytes) in size
-fileData getFileData(uint64_t byteAddress);
+fileData getFileData(FILE* filePtr, uint64_t byteAddress);
 
 // In:			thisFileData (fileData (struct))
 // Out:			boolean
-// Purpose:		to detemine if we have reached the end of the directory (no more entries left)
+// Purpose:		to determine if the file is read only
 // Notes:
-BOOL isEndOfDirectory(fileData thisFileData);
+BOOL isReadOnly(fileData thisFileData);
 
 // In:			thisFileData (fileData (struct))
-// Out:			boolean
-// Purpose:		to determine if a given directory entry is empty 
-// Notes: 		this applies to directories/files that were deleted
-BOOL isEmptyDirectoryEntry(fileData thisFileData); 
+// Out: 		boolean
+// Purpose:		to determine if the current file directory is a system file
+// Notes:	
+BOOL isSystemFile(fileData thisFileData);
+
+// In:			thisFileData (fileData (struct))
+// Out: 		boolean
+// Purpose:		to determine if the current file directory is a hidden file/directory
+// Notes:	
+BOOL isHiddenFile(fileData thisFileData);
+
+// In:			thisFileData (fileData (struct))
+// Out: 		boolean
+// Purpose:		to determine if the current file directory is the volume label of the volume
+// Notes:	
+BOOL isVolumeLabel(fileData thisFileData);
 
 // In:			thisFileData (fileData (struct))
 // Out: 		boolean
 // Purpose:		to determine if the current file directory is part of a long name
 // Notes:		fileAttributes is really a byte we are representing as an int
-BOOL hasLongName(fileData thisFileData);
+BOOL isLongName(fileData thisFileData);
 
 // In:			thisFileData (fileData (struct))
 // Out: 		boolean
@@ -112,10 +126,16 @@ BOOL isDirectory(fileData thisFileData);
 BOOL isFile(fileData thisFileData);
 
 // In:			thisFileData (fileData (struct))
-// Out: 		boolean
-// Purpose:		to determine if the current file directory is the volume label of the volume
-// Notes:	
-BOOL isVolumeLabel(fileData thisFileData);
+// Out:			boolean
+// Purpose:		to detemine if we have reached the end of the directory (no more entries left)
+// Notes:
+BOOL isEndOfDirectory(fileData thisFileData);
+
+// In:			thisFileData (fileData (struct))
+// Out:			boolean
+// Purpose:		to determine if a given directory entry is empty 
+// Notes: 		this applies to directories/files that were deleted
+BOOL isEmptyDirectoryEntry(fileData thisFileData); 
 
 // In:			thisFileData (fileData (struct))
 // Out: 		boolean
@@ -164,3 +184,6 @@ date convertToDateStruct(uint16_t machineRepresentation);
 // Purpose: 	to convert the machine representation of a time to a human-readable version
 // Notes:		same logic as convertToDateStruct
 time convertToTimeStruct(uint16_t machineRepresentation);
+
+
+

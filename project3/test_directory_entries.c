@@ -8,7 +8,7 @@
 /////////////////////////////////////////////////////////////
 // MACROS ///////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
-#define ENTRIES_COUNT 5
+#define ENTRIES_COUNT 6
 
 //////////////////////////////////////////////////////////////
 // FUNCTION DECLARATIONS /////////////////////////////////////
@@ -17,7 +17,7 @@ void testEndOfDirectory(int testNumber);
 void setUpSystem();
 void testSetUp();
 void testIsEmptyDirectoryEntry(int testNumber);
-void testHasLongName(int testNumber);
+void testIsLongName(int testNumber);
 void testIsDirectory(int testNumber);
 void testIsFile(int testNumber);
 void testIsVolumeLabel(int testNumber);
@@ -32,6 +32,7 @@ fileData directoryEntry_2;
 fileData directoryEntry_3;
 fileData directoryEntry_4;
 fileData directoryEntry_5;
+fileData directoryEntry_6;
 
 fileData system[ENTRIES_COUNT];
 
@@ -39,8 +40,13 @@ fileData system[ENTRIES_COUNT];
 // MAIN PROGRAM //////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 int main() {
-	setUpSystem();	
-	testIsReadOnly(1);
+	setUpSystem();
+	testIsReadOnly(2);
+	testIsFile(3);
+	testIsDirectory(5);
+	testIsEmptyDirectoryEntry(5);	
+	testIsVolumeLabel(1);
+	testIsLongName(2);
 }
 
 //////////////////////////////////////////////////////////////
@@ -77,7 +83,7 @@ void setUpSystem() {
 	// initialize directoryEntry_3
 	char fileName3[SH_FILE_NAME + 1] = "GHOST.TXT";	
 	strcpy(directoryEntry_3.fileName, fileName3);
-	directoryEntry_3.fileName[0] 		= 5;
+	directoryEntry_3.fileName[0] 		= -27;
 	directoryEntry_3.fileAttributes 	= 32; // 00100000	
 	directoryEntry_3.createTime 		= 0;
 	directoryEntry_3.createDate 		= 0;
@@ -113,12 +119,26 @@ void setUpSystem() {
 	directoryEntry_5.writeTime 			= 0;
 	directoryEntry_5.writeDate 			= 0;
 	directoryEntry_5.fileSize 			= 0;
-	
+
+	// initialize directoryEntry_6	
+	char fileName6[SH_FILE_NAME + 5] = "POOPOO";	
+	strcpy(directoryEntry_6.fileName, fileName6);
+	directoryEntry_6.fileAttributes 	= 15;
+	directoryEntry_6.createTime 		= 0;
+	directoryEntry_6.createDate 		= 0;
+	directoryEntry_6.lastAccessDate 	= 0;
+	directoryEntry_6.firstClusterNumHI 	= 0;
+	directoryEntry_6.firstClusterNumLO 	= 0;
+	directoryEntry_6.writeTime 			= 0;
+	directoryEntry_6.writeDate 			= 0;
+	directoryEntry_6.fileSize 			= 0;
+
 	system[0] = directoryEntry_1;
 	system[1] = directoryEntry_2;
 	system[2] = directoryEntry_3;
 	system[3] = directoryEntry_4;
 	system[4] = directoryEntry_5;
+	system[5] = directoryEntry_6;
 }
 
 // tests: 	setUpSystem()
@@ -127,6 +147,7 @@ void testSetUp() {
 	int i;
 	fileData thisFileData;
 
+	printf("Testing set up...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		thisFileData = system[i];
 		printf("%s\n", thisFileData.fileName);		
@@ -147,7 +168,8 @@ void testSetUp() {
 // from: 	booleans.h
 void testEndOfDirectory(int testNumber) {
 	int i;		// looping variable
-
+	
+	printf("Testing end of directory...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		if (isEndOfDirectory(system[i])) {
 			printf("HOLY CRAP! IT IS THE END!\n");
@@ -159,10 +181,11 @@ void testEndOfDirectory(int testNumber) {
 }
 
 void testIsDirectory(int testNumber) {
-	int expectedValues[ENTRIES_COUNT] = {0, 1, 0, 0, 0};
+	int expectedValues[ENTRIES_COUNT] = {0, 1, 0, 0, 0, 0};
 	int actualValue;
 	int i;
 
+	printf("Testing is directory...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		actualValue = isDirectory(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 
@@ -170,10 +193,11 @@ void testIsDirectory(int testNumber) {
 }
 
 void testIsFile(int testNumber) {
-	int expectedValues[ENTRIES_COUNT] = {0, 0, 1, 1, 0};
+	int expectedValues[ENTRIES_COUNT] = {0, 0, 1, 1, 0, 0};
 	int actualValue;
 	int i;
-
+	
+	printf("Testing is file...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		actualValue = isFile(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 
@@ -182,10 +206,11 @@ void testIsFile(int testNumber) {
 }
 
 void testIsEmptyDirectoryEntry(int testNumber) {
-	int expectedValues[ENTRIES_COUNT] = {0, 0, 1, 0, 0};
+	int expectedValues[ENTRIES_COUNT] = {0, 0, 1, 0, 0, 0};
 	int actualValue;
 	int i;
 
+	printf("Testing is empty directory entry...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		actualValue = isEmptyDirectoryEntry(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 
@@ -194,10 +219,12 @@ void testIsEmptyDirectoryEntry(int testNumber) {
 }
 
 void testIsReadOnly(int testNumber) {
-	int expectedValues[ENTRIES_COUNT] = {0, 0, 0, 1, 0};
+	int expectedValues[ENTRIES_COUNT] = {0, 0, 0, 1, 0, 0};
 	int actualValue;
 	int i;
 
+	
+	printf("Testing is read only...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		actualValue = isReadOnly(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 
@@ -206,10 +233,11 @@ void testIsReadOnly(int testNumber) {
 }
 
 void testIsVolumeLabel(int testNumber) {
-	int expectedValues[ENTRIES_COUNT] = {1, 0, 0, 0, 0};
+	int expectedValues[ENTRIES_COUNT] = {1, 0, 0, 0, 0, 0};
 	int actualValue;
 	int i;
 
+	printf("Testing is volume label...\n");
 	for (i = 0; i < ENTRIES_COUNT; i++) {
 		actualValue = isVolumeLabel(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 
@@ -217,4 +245,15 @@ void testIsVolumeLabel(int testNumber) {
 	} 
 }
 	
+void testIsLongName(int testNumber) {	
+	int expectedValues[ENTRIES_COUNT] = {0, 0, 0, 0, 0, 1};
+	int actualValue;
+	int i;
+
+	printf("Testing is long name...\n");
+	for (i = 0; i < ENTRIES_COUNT; i++) {
+		actualValue = isLongName(system[i]);
+		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 		
+	} 
+}
 

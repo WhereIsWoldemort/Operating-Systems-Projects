@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <math.h>
+#include "directory_entries.h"
 
 //////////////////////////////////////////////////////
 // MACROS ////////////////////////////////////////////
@@ -44,63 +45,9 @@
 #define TS_OFFSET		32		// total sectors
 #define TS_SIZE			4		
 
-// macros for directory entry data structure
-#define DN_OFFSET		0		// directory name
-#define DN_SIZE			11
-#define DA_OFFSET		11		// directory attributes
-#define DA_SIZE			1	
-#define DCT_OFFSET		14		// create time
-#define DCT_SIZE		2
-#define DCD_OFFSET		16		// create date 
-#define DCD_SIZE		2
-#define DLAD_OFFSET		18		// last access date
-#define DLAD_SIZE		2
-#define DFCH_OFFSET		20		// first cluster number high order word
-#define DFCH_SIZE		2
-#define DWT_OFFSET		22		// write time
-#define DWT_SIZE		2
-#define DWD_OFFSET		24		// write date
-#define DWD_SIZE		2
-#define DFCL_OFFSET		26		// first cluster number low order word
-#define DFCL_SIZE		2
-#define DFS_OFFSET		28		// file size
-#define DFS_SIZE		4
-
 // general system macros
 #define READ_RESOLUTION	1		// the resolution we want to read at in bytes
-#define SH_DIRNAME_SIZE	11		// the number of characters in a short directory name
 #define DIR_ENTRY_SIZE	32		// the size of each entry within a directory in bytes
-#define EPOCH_YEAR 		1980	// the year that all years are calculated from in fat32			
-
-/////////////////////////////////////////////////////////////////////////////
-// TYPE DEFINITONS //////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-	char 		fileName[SH_DIRNAME_SIZE+1]; 	// the name of the file
-	uint8_t		fileAttributes;					// all attributes associated with file
-	uint16_t	createTime;						// time file was created
-	uint16_t	createDate;						// date file was created
-	uint16_t	lastAccessDate;					// date file was last accessed
-	uint16_t	firstClusterNumHI;				// the higher value word of the first cluster number
-	uint16_t	writeTime;						// time file was last written to
-	uint16_t	writeDate;						// date file was last written to
-	uint16_t	firstClusterNumLO;				// the lower value word of the first cluster number
-	uint32_t	fileSize;						// the size of the file in bytes
-	uint64_t	byteAddress;					// holds the byte address of the directory entry structure
-} fileData;
-
-typedef struct {
-	int day;
-	int month;
-	int year;
-} date;
-
-typedef struct {
-	int hours;
-	int minutes;
-	int seconds;
-} time;
 
 //////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////
@@ -134,10 +81,6 @@ uint32_t getFirstSectorOfCluster(uint32_t numOfCluster);
 uint32_t getThisFATSectorNumber(uint32_t numOfCluster);
 uint16_t getThisFATEntryOffset(uint32_t numOfCluster);
 uint64_t convertSectorNumToBytes(uint32_t sectorNumber);
-fileData getFileData(uint64_t byteAddress);
-
-date convertToDateStruct(uint16_t machineRepresentation);
-time convertToTimeStruct(uint16_t machineRepresentation);
 
 /* This is the main function of your project, and it will be run
  * first before all other functions.
@@ -258,7 +201,7 @@ int main(int argc, char *argv[])
 
 	}
 
-	/* Close the file/
+	/* Close the file */
 	fclose(filePtr);
 
 	return 0; /* Success */
@@ -306,18 +249,16 @@ void printVolumeName() {
 	
 	while (sectorByteCounter < bytesPerSector) {
 		// jumps to starting byte address of each directory entry
-		thisFileData = getFileData(byteAddress);
-		thisFileData.fileName[SH_DIRNAME_SIZE] = '\0';
+		thisFileData = getFileData(filePtr, byteAddress);
+		thisFileData.fileName[SH_FILE_NAME] = '\0';
 
-		if ((thisFileData.fileAttributes & 8) == 8) {
+		if (isVolumeLabel(thisFileData)) {
 			printf("%s\n", thisFileData.fileName);
 		}
 		
 		byteAddress += DIR_ENTRY_SIZE;
 		sectorByteCounter += DIR_ENTRY_SIZE;
 	}		
-
-
 }
 
 // In: 
@@ -348,14 +289,13 @@ void changeDirectory(char* directory ) {
 	byteAddress = currentDirectory;	
 
 	// get file entry data structure at byte adress
-	thisFileData = getFileData(byteAddress);
+	thisFileData = getFileData(filePtr, byteAddress);
 
 	// while the first character of the fileName in file entry structure is not '\0'
-	while (thisFileData.fileName[0] != '\0') {
+	while (!isEndOfDirectory(thisFileData)) {
 			
 		// print the fileName
-		if (thisFileData.fileName[0] != -27) { 
-			//TODO: Why is there a magic humber?!?!?!?!?!
+		if (!isEmptyDirectoryEntry(thisFileData)) { 
 			if (strncmp(thisFileData.fileName, directory, strlen(directory) - 2) == 0)
 			{
 				currentDirectory = thisFileData.firstClusterNumHI;
@@ -372,7 +312,7 @@ void changeDirectory(char* directory ) {
 		byteAddress += 64;	
 
 		// get file entry data structure at new byte address
-		thisFileData = getFileData(byteAddress);
+		thisFileData = getFileData(filePtr, byteAddress);
 	}
 
 	if (cwdSet==0)
@@ -395,22 +335,21 @@ void listFiles() {
 	byteAddress = currentDirectory;	
 
 	// get file entry data structure at byte adress
-	thisFileData = getFileData(byteAddress);
+	thisFileData = getFileData(filePtr, byteAddress);
 
 	// while the first character of the fileName in file entry structure is not '\0'
-	while (thisFileData.fileName[0] != '\0') {
+	while (!isEndOfDirectory(thisFileData)) {
 			
 		// print the fileName
-		if (thisFileData.fileName[0] != -27) { 
-			//TODO: Why is there a magic number??!?!?!?!?
+		if (!isEmptyDirectoryEntry(thisFileData) && !isVolumeLabel(thisFileData) && !isLongName(thisFileData)) { 
 			printf("%s\n", thisFileData.fileName); 
 		}
 
 		// get new byte address
-		byteAddress += 64;	
+		byteAddress += 32;	
 
 		// get file entry data structure at new byte address
-		thisFileData = getFileData(byteAddress);
+		thisFileData = getFileData(filePtr, byteAddress);
 	}
 }
 
@@ -464,135 +403,6 @@ uint16_t getThisFATEntryOffset(uint32_t numOfCluster) {
 	uint64_t fatOffset;
 	fatOffset = numOfCluster * 4;
 	return (fatOffset % bytesPerSector);
-}
-
-// In: 		byteAddress (uint64_t)
-// Out: 	thisFileData (fileData (struct))
-// Purpose: to place all file metadata based on a byte address in a struct and return it
-// Note: 	handles file metadata blocks that are 32 bits (4 bytes) in size
-fileData getFileData(uint64_t byteAddress) {
-	fileData thisFileData;
-	
-	// 1. jump to where the file data is
-	fseek(filePtr, byteAddress, SEEK_SET);
-
-	// 2. get the directory name
-	fread(&(thisFileData.fileName), READ_RESOLUTION, DN_SIZE, filePtr);
-	thisFileData.fileName[SH_DIRNAME_SIZE] = '\0';
-	
-	// 3. get the file attributes
-	fread(&(thisFileData.fileAttributes), READ_RESOLUTION, DA_SIZE, filePtr);
-
-	// 4. get the create time
-	fseek(filePtr, DCT_OFFSET - (DA_OFFSET + DA_SIZE), SEEK_CUR);
-	fread(&(thisFileData.createTime), READ_RESOLUTION, DCT_SIZE, filePtr);
-	thisFileData.createTime = le16toh(thisFileData.createTime);
-
-	// 5. get the create date
-	fread(&(thisFileData.createDate), READ_RESOLUTION, DCD_SIZE, filePtr);
-	thisFileData.createDate = le16toh(thisFileData.createDate);
-	
-	// 6. get the last access date
-	fread(&(thisFileData.lastAccessDate), READ_RESOLUTION, DLAD_SIZE, filePtr);
-	thisFileData.lastAccessDate = le16toh(thisFileData.lastAccessDate);
-
-	// 7. get the first cluster number high order word
-	fread(&(thisFileData.firstClusterNumHI), READ_RESOLUTION, DFCH_SIZE, filePtr);
-	thisFileData.firstClusterNumHI = le16toh(thisFileData.firstClusterNumHI);
-
-	// 8. get the last write time
-	fread(&(thisFileData.writeTime), READ_RESOLUTION, DWT_SIZE, filePtr);
-	thisFileData.writeTime = le16toh(thisFileData.writeTime);
-
-	// 9. get the last write date
-	fread(&(thisFileData.writeDate), READ_RESOLUTION, DWD_SIZE, filePtr);
-	thisFileData.writeDate = le16toh(thisFileData.writeDate);
-
-	// 10. get the first cluster number low order word
-	fread(&(thisFileData.firstClusterNumLO), READ_RESOLUTION, DFCL_SIZE, filePtr);
-	thisFileData.firstClusterNumLO = le16toh(thisFileData.firstClusterNumLO);
-
-	// 11. get the file size
-	fread(&(thisFileData.fileSize), READ_RESOLUTION, DFS_SIZE, filePtr);
-	thisFileData.fileSize = le32toh(thisFileData.fileSize);
-
-	return thisFileData;
-}
-
-// In: 			machineRepresentation (uint16_t)
-// Out: 		thisDate (date (struct))
-// Purpose: 	to convert the machine representation of the date into a human readable date
-// Notes:		specific bits are extracted through shifting and using & for masking
-date convertToDateStruct(uint16_t machineRepresentation) {
-	date thisDate; 
-	uint16_t mask;
-
-	// 1. make a bit mask for bits 5-15
-	mask = ~(~0 << 5);
-
-	// 2. take bitwise AND of this and the machine represenation
-	thisDate.day = mask & machineRepresentation;
-
-	// 3. shift 5 bits to the right to put month in the lowest order
-	machineRepresentation = machineRepresentation >> 5;
-
-	// 4. make a bit mask for bits 4-15
-	mask = ~(~0 << 4);
-
-	// 5. take bitwise AND of this and the machine represenation
-	thisDate.month = mask & machineRepresentation;
-
-	// 6. shift 4 bits to the right to put year in lowest order
-	machineRepresentation = machineRepresentation >> 4;
-
-	// 7. make a bit mask for 7-15 
-	mask = ~(~0 << 7);
-
-	// 8. take bitwise AND of this and the machine representation
-	thisDate.year = mask & machineRepresentation;
-
-	// 9. add epoch to the calculated year
-	thisDate.year += EPOCH_YEAR;
-
-	return thisDate;
-}
-
-// In: 		machineRepresentation (uint16_t)
-// Out:		thisTime (time (struct))
-// Purpose: to convert the machine representation of a time to a human-readable version
-// Notes:	same logic as convertToDateStruct
-time convertToTimeStruct(uint16_t machineRepresentation) {
-	time thisTime;
-	uint16_t mask;
-
-	// 1. make a bit mask for bits 5-15
-	mask = ~(~0 << 5);
-	
-	// 2. take a bitwise AND of this and the machine representation
-	thisTime.seconds = mask & machineRepresentation;
-
-	// 3. multiply seconds by 2 (because granularity is 2 seconds)
-	thisTime.seconds *= 2;
-
-	// 4. shift 5 bits to the right to put minutes in lowest order
-	machineRepresentation = machineRepresentation >> 5;
-
-	// 5. make a bit mask for 6-15
-	mask = ~(~0 << 6);
-
-	// 6. take a bitwise AND of this and the machine representation
-	thisTime.minutes = mask & machineRepresentation;
-
-	// 7. shift 6 bits to the right to put hours in the lowest order
-	machineRepresentation = machineRepresentation >> 6;
-
-	// 8. make a bit mask for 5-15
-	mask = ~(~0 << 5);
-
-	// 9. take a bitwise AND of this and the machine representation
-	thisTime.hours = mask & machineRepresentation;
-
-	return thisTime;
 }
 
 uint64_t convertSectorNumToBytes(uint32_t sectorNumber) {
