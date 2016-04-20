@@ -133,7 +133,7 @@ BOOL isEmptyDirectoryEntry(fileData thisFileData) {
 	}
 }
 
-/*uint32_t getFirstClusterOfEntry(fileData thisFileData) {
+uint32_t getFirstClusterOfEntry(fileData thisFileData) {
 	
 	uint32_t firstClusterEntry;
 
@@ -149,7 +149,74 @@ BOOL isEmptyDirectoryEntry(fileData thisFileData) {
 
 	//Convert the cluster num into a byte format
 	firstClusterEntry = convertSectorNumToBytes(firstClusterEntry);	
-}*/
+}
 
+date convertToDateStruct(uint16_t machineRepresentation) {
+	date thisDate; 
+	uint16_t mask;
+
+	// 1. make a bit mask for bits 5-15
+	mask = ~(~0 << 5);
+
+	// 2. take bitwise AND of this and the machine represenation
+	thisDate.day = mask & machineRepresentation;
+
+	// 3. shift 5 bits to the right to put month in the lowest order
+	machineRepresentation = machineRepresentation >> 5;
+
+	// 4. make a bit mask for bits 4-15
+	mask = ~(~0 << 4);
+
+	// 5. take bitwise AND of this and the machine represenation
+	thisDate.month = mask & machineRepresentation;
+
+	// 6. shift 4 bits to the right to put year in lowest order
+	machineRepresentation = machineRepresentation >> 4;
+
+	// 7. make a bit mask for 7-15 
+	mask = ~(~0 << 7);
+
+	// 8. take bitwise AND of this and the machine representation
+	thisDate.year = mask & machineRepresentation;
+
+	// 9. add epoch to the calculated year
+	thisDate.year += EPOCH_YEAR;
+
+	return thisDate;
+}
+
+time convertToTimeStruct(uint16_t machineRepresentation) {
+	time thisTime;
+	uint16_t mask;
+
+	// 1. make a bit mask for bits 5-15
+	mask = ~(~0 << 5);
+	
+	// 2. take a bitwise AND of this and the machine representation
+	thisTime.seconds = mask & machineRepresentation;
+
+	// 3. multiply seconds by 2 (because granularity is 2 seconds)
+	thisTime.seconds *= 2;
+
+	// 4. shift 5 bits to the right to put minutes in lowest order
+	machineRepresentation = machineRepresentation >> 5;
+
+	// 5. make a bit mask for 6-15
+	mask = ~(~0 << 6);
+
+	// 6. take a bitwise AND of this and the machine representation
+	thisTime.minutes = mask & machineRepresentation;
+
+	// 7. shift 6 bits to the right to put hours in the lowest order
+	machineRepresentation = machineRepresentation >> 6;
+
+	// 8. make a bit mask for 5-15
+	mask = ~(~0 << 5);
+
+	// 9. take a bitwise AND of this and the machine representation
+	thisTime.hours = mask & machineRepresentation;
+
+	return thisTime;
+}
 
 
