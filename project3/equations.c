@@ -28,4 +28,11 @@ uint64_t convertSectorNumToBytes(bootSector thisBootSector, uint32_t sectorNumbe
 	return sectorNumber * thisBootSector.bytesPerSector;
 }
 
+uint64_t convertClusterNumToBytes(bootSector thisBootSector, uint32_t clusterNumber) {
+	uint32_t firstSectorOfCluster;
+	uint64_t clusterNumberInBytes;
 
+	firstSectorOfCluster = getFirstSectorOfCluster(thisBootSector, clusterNumber);
+	clusterNumberInBytes = convertSectorNumToBytes(thisBootSector, firstSectorOfCluster);
+	return clusterNumberInBytes;
+}

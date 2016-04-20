@@ -41,5 +41,9 @@ uint16_t getThisFATEntryOffset(bootSector thisBootSector, uint32_t numOfCluster)
 // Notes:
 uint64_t convertSectorNumToBytes(bootSector thisBootSector, uint32_t sectorNumber);
 
-
+// In: 			thisBootSector (bootSector (struct)), clusterNumber (uint32_t)
+// Out:			clusterNumInBytes (uint64_t)
+// Purpose:		to return the byte address of a given cluster number
+// Notes:
+uint64_t convertClusterNumToBytes(bootSector thisBootSector, uint32_t clusterNumber);
 

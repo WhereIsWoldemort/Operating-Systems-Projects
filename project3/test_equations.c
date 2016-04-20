@@ -18,7 +18,7 @@ void testGetFirstSectorOfCluster(int testNumber);
 void testGetThisFATSectorNumber(int testNumber);
 void testGetThisFATEntryOffset(int testNumber);
 void testConvertSectorNumToBytes(int testNumber); 
-
+void testConvertClusterNumToBytes(int testNumber);
 
 ////////////////////////////////////////////////////////////////
 // MAIN PROGRAM ////////////////////////////////////////////////
@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
 	testGetThisFATSectorNumber(1);
 	testGetThisFATEntryOffset(1);
 	testConvertSectorNumToBytes(1); 
+	testConvertClusterNumToBytes(1);
 
 	return 0;
 }
@@ -110,4 +111,11 @@ void testConvertSectorNumToBytes(int testNumber) {
 	sectorNumberInBytes = convertSectorNumToBytes(thisBootSector, 45);
 	printf("Expected Value = 23040; Actual Value = %d\n", sectorNumberInBytes);
 
+}
+
+void testConvertClusterNumToBytes(int testNumber) {
+	uint64_t clusterNumberInBytes;
+	printf("Testing convertClusterNumToBytes()...\n");
+	clusterNumberInBytes = convertClusterNumToBytes(thisBootSector, 403);
+	printf("Expected Value = 1254912;  Actual Value = %d\n", clusterNumberInBytes);
 } 
