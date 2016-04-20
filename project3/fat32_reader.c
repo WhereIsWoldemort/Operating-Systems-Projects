@@ -201,7 +201,7 @@ void printStats(char* fileName) {
 		printf("That file does not exist in this directory.\n");
 	}
 	else {
-	/*	thisFileData 		= getFileData(filePtr, byteAddress);
+		thisFileData 		= getFileData(filePtr, byteAddress);
 		thisCreateDate 		= getCreateDate(thisFileData);
 		thisCreateTime 		= getCreateTime(thisFileData);
 		thisLastAccessDate 	= getLastAccessDate(thisFileData);
@@ -210,12 +210,12 @@ void printStats(char* fileName) {
 
 		printf("File Name: %s\n", thisFileData.fileName);
 		printf("File Attributes: %d\n", thisFileData.fileAttributes);
-		printf("Create Date: %d-%d-%d\n", thisCreateDate.month, thisCreateDate.day, thisCreateDate.year); 			
-		printf("Create Time: %2d:%2d:%2d\n", thisCreateTime.hours, thisCreateTime.minutes, thisCreateTime.seconds);
-		printf("Last Access Date: %d-%d-%d\n", thisLastAccessDate.month, thisLastAccessDate.day, thisLastAccessDate.year); 			
-		printf("Last Write Date: %d-%d-%d\n", thisWriteDate.month, thisWriteDate.day, thisWriteDate.year); 			
-		printf("Write Time: %2d:%2d:%2d\n", thisWriteTime.hours, thisWriteTime.minutes, thisWriteTime.seconds);
-	*/	
+		printf("Create Date: %02d-%02d-%02d\n", thisCreateDate.month, thisCreateDate.day, thisCreateDate.year); 			
+		printf("Create Time: %02d:%02d:%02d\n", thisCreateTime.hours, thisCreateTime.minutes, thisCreateTime.seconds);
+		printf("Last Access Date: %02d-%02d-%02d\n", thisLastAccessDate.month, thisLastAccessDate.day, thisLastAccessDate.year); 			
+		printf("Last Write Date: %02d-%02d-%02d\n", thisWriteDate.month, thisWriteDate.day, thisWriteDate.year); 			
+		printf("Write Time: %02d:%02d:%02d\n", thisWriteTime.hours, thisWriteTime.minutes, thisWriteTime.seconds);
+		
 	}
 }
 

@@ -23,11 +23,8 @@ void testIsFile(int testNumber);
 void testIsVolumeLabel(int testNumber);
 void testIsReadOnly(int testNumber);
 void testGetFirstClusterOfEntry(int testNumber);
-void testGetCreateTime(int testNumber);
-void testGetCreateDate(int testNumber);
-void testGetLastAccessDate(int testNumber);
-void testGetWriteTime(int testNumber);
-void testGetWriteDate(int testNumber);
+void testConvertToDateStruct(int testNumber);
+void testConvertToTimeStruct(int testNumber);
 
 //////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////////
@@ -52,6 +49,10 @@ int main() {
 	testIsEmptyDirectoryEntry(5);	
 	testIsVolumeLabel(1);
 	testIsLongName(2);
+	testConvertToDateStruct(1);
+	testConvertToDateStruct(2);
+	testConvertToTimeStruct(1);
+	testConvertToTimeStruct(2);	
 }
 
 //////////////////////////////////////////////////////////////
@@ -89,9 +90,9 @@ void setUpSystem() {
 	char fileName3[SH_FILE_NAME + 1] = "GHOST.TXT";	
 	strcpy(directoryEntry_3.fileName, fileName3);
 	directoryEntry_3.fileName[0] 		= -27;
-	directoryEntry_3.fileAttributes 	= 32; // 00100000	
-	directoryEntry_3.createTime 		= 0;
-	directoryEntry_3.createDate 		= 0;
+	directoryEntry_3.fileAttributes 	= 32; 		// 0010 0000	
+	directoryEntry_3.createTime 		= 43195; 	// 1010 1000 1011 1011
+	directoryEntry_3.createDate 		= 18613;	// 0100 1000 1011 0101
 	directoryEntry_3.lastAccessDate 	= 0;
 	directoryEntry_3.firstClusterNumHI 	= 0;
 	directoryEntry_3.firstClusterNumLO 	= 0;
@@ -102,9 +103,9 @@ void setUpSystem() {
 	// initialize directoryEntry_4
 	char fileName4[SH_FILE_NAME + 1] = "BANANA.TXT";
 	strcpy(directoryEntry_4.fileName, fileName4);
-	directoryEntry_4.fileAttributes 	= 33; // 00100001	
-	directoryEntry_4.createTime 		= 0;
-	directoryEntry_4.createDate 		= 0;
+	directoryEntry_4.fileAttributes 	= 33; 		// 0010 0001	
+	directoryEntry_4.createTime 		= 12157;	// 0010 1111 0111 1101
+	directoryEntry_4.createDate 		= 10830;	// 0010 1010 0100 1110
 	directoryEntry_4.lastAccessDate 	= 0;
 	directoryEntry_4.firstClusterNumHI 	= 0;
 	directoryEntry_4.firstClusterNumLO 	= 0;
@@ -262,6 +263,34 @@ void testIsLongName(int testNumber) {
 	} 
 }
 
-void testGetCreateTime() {
+void testConvertToDateStruct(int testNumber) {	
+	date thisDate;	
 
+	printf("Testing convertToDateStruct()...\n");
+	if (testNumber == 1) {
+		printf("Running test 1...\n");
+		thisDate = convertToDateStruct(directoryEntry_3.createDate);
+		printf("Expected = 05-21-2016; Actual = %02d-%02d-%02d\n", thisDate.month, thisDate.day, thisDate.year);
+	}
+	else if (testNumber == 2) {
+		printf("Running test 2...\n");
+		thisDate = convertToDateStruct(directoryEntry_4.createDate);
+		printf("Expected = 02-14-2001; Actual = %02d-%02d-%02d\n", thisDate.month, thisDate.day, thisDate.year);
+	}
+}
+
+void testConvertToTimeStruct(int testNumber) {
+	time thisTime;
+
+	printf("Testing convertToTimeStruct()... \n");
+	if (testNumber == 1) {
+		printf("Running test 1...\n");
+		thisTime = convertToTimeStruct(directoryEntry_3.createTime);
+		printf("Expected = 21:05:54; Actual = %02d:%02d:%02d\n", thisTime.hours, thisTime.minutes, thisTime.seconds);
+	}
+	else if (testNumber == 2) {
+		printf("Running test 2...\n");
+		thisTime = convertToTimeStruct(directoryEntry_4.createTime);
+		printf("Expected = 05:59:58; Actual = %02d:%2d:%02d\n", thisTime.hours, thisTime.minutes, thisTime.seconds);
+	}
 }

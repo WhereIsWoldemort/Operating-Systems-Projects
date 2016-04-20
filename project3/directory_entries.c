@@ -181,8 +181,32 @@ uint32_t getFirstClusterOfEntry(fileData thisFileData) {
 
 time getCreateTime(fileData thisFileData) {
 	time thisTime;
-
+	thisTime = convertToTimeStruct(thisFileData.createTime);
 	return thisTime;
+}
+
+date getCreateDate(fileData thisFileData) {
+	date thisDate;
+	thisDate = convertToDateStruct(thisFileData.createDate);
+	return thisDate;
+}
+
+date getLastAccessDate(fileData thisFileData) {
+	date thisDate;
+	thisDate = convertToDateStruct(thisFileData.lastAccessDate);
+	return thisDate;
+}
+
+time getWriteTime(fileData thisFileData) {
+	time thisTime;
+	thisTime = convertToTimeStruct(thisFileData.writeTime);
+	return thisTime;
+}
+
+date getWriteDate(fileData thisFileData) {
+	date thisDate;
+	thisDate = convertToDateStruct(thisFileData.writeDate);
+	return thisDate;
 }
 
 date convertToDateStruct(uint16_t machineRepresentation) {
