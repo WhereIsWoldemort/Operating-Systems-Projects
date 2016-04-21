@@ -3,9 +3,9 @@
 ############################
 # TEST DIRECTORY_ENTRIES.C #
 ############################
-#gcc -o test_directory_entries test_directory_entries.c directory_entries.c equations.c
-#./test_directory_entries
-#rm test_directory_entries
+gcc -o test_directory_entries test_directory_entries.c directory_entries.c equations.c boot_sector.c
+./test_directory_entries fat32.img
+rm test_directory_entries
 
 ######################
 # TEST BOOT_SECTOR.C #
@@ -17,6 +17,6 @@
 ####################
 # TEST EQUATIONS.C #
 ####################
-gcc -o test_equations test_equations.c equations.c boot_sector.c
-./test_equations fat32.img
-rm test_equations
+#gcc -o test_equations test_equations.c equations.c boot_sector.c
+#./test_equations fat32.img
+#rm test_equations

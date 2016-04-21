@@ -134,28 +134,28 @@ BOOL isEmptyDirectoryEntry(fileData thisFileData) {
 	}
 }
 
-uint64_t checkFileExists(FILE* filePtr, char* directoryName , uint64_t directoryAddress) {
+uint64_t checkFileExists(FILE* filePtr, char* fileName , uint64_t currentByteAddress) {
 	fileData thisFileData;	
 
 	// get file entry data structure at byte adress
-	thisFileData = getFileData(filePtr, directoryAddress);
+	thisFileData = getFileData(filePtr, currentByteAddress);
 
 	//Loop until we have found the end of the directory
 	while (!isEndOfDirectory(thisFileData)) {
 		//Make sure the directory or file we are looking at is not free, a long name, or a volume.
 		if (!isEmptyDirectoryEntry(thisFileData) && !isLongName(thisFileData) && !isVolumeLabel(thisFileData)) { 
 
-			if (strncmp(thisFileData.fileName, directoryName, strlen(directoryName) - 2) == 0)
+			if (strncmp(thisFileData.fileName, fileName, strlen(fileName) - 2) == 0)
 			{
-				return directoryAddress;
+				return currentByteAddress;
 			}  
 		}
 
 		// get new byte address
-		directoryAddress += 32;	
+		currentByteAddress += 32;	
 
 		// get file entry data structure at new byte address
-		thisFileData = getFileData(filePtr, directoryAddress);
+		thisFileData = getFileData(filePtr, currentByteAddress);
 	}
 
 	return -1;
@@ -173,10 +173,12 @@ uint32_t getFirstClusterOfEntry(fileData thisFileData) {
 	firstClusterEntry += thisFileData.firstClusterNumLO;
 
 	//Convert the cluster num into the correct cluster num
-	firstClusterEntry = getFirstSectorOfCluster(firstClusterEntry);
+	//firstClusterEntry = getFirstSectorOfCluster(firstClusterEntry);
 
 	//Convert the cluster num into a byte format
-	firstClusterEntry = convertSectorNumToBytes(firstClusterEntry);	
+	//firstClusterEntry = convertSectorNumToBytes(firstClusterEntry);	
+
+	return firstClusterEntry;
 }
 
 time getCreateTime(fileData thisFileData) {

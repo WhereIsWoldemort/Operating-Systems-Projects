@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "directory_entries.h"
 #include <string.h>
-
+#include "equations.h"
 /////////////////////////////////////////////////////////////
 // MACROS ///////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
@@ -22,6 +22,7 @@ void testIsDirectory(int testNumber);
 void testIsFile(int testNumber);
 void testIsVolumeLabel(int testNumber);
 void testIsReadOnly(int testNumber);
+void testCheckFileExists(int testNumber);
 void testGetFirstClusterOfEntry(int testNumber);
 void testConvertToDateStruct(int testNumber);
 void testConvertToTimeStruct(int testNumber);
@@ -38,10 +39,26 @@ fileData directoryEntry_6;
 
 fileData system[ENTRIES_COUNT];
 
+FILE* filePtr;
+bootSector thisBootSector;
+
 //////////////////////////////////////////////////////////////
 // MAIN PROGRAM //////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
-int main() {
+int main(int argc, char** argv) {
+
+	if (argc != 2) {
+		printf("You entered an incorrect amount of arguments for this program. <USAGE: ./fat32_reader fat32.img>\n");
+		return -1;
+	}
+
+	if ((filePtr = fopen(argv[1], "rb")) == 0) {
+		perror(argv[1]);
+		return -1;
+	}
+
+	thisBootSector = setUpBootSector(filePtr);
+
 	setUpSystem();
 	testIsReadOnly(2);
 	testIsFile(3);
@@ -52,7 +69,16 @@ int main() {
 	testConvertToDateStruct(1);
 	testConvertToDateStruct(2);
 	testConvertToTimeStruct(1);
-	testConvertToTimeStruct(2);	
+	testConvertToTimeStruct(2);
+	testCheckFileExists(1);
+	testCheckFileExists(2);
+	testCheckFileExists(3);	
+	testCheckFileExists(4);	
+	testCheckFileExists(5);	
+	testGetFirstClusterOfEntry(1);
+
+
+	fclose(filePtr);
 }
 
 //////////////////////////////////////////////////////////////
@@ -80,8 +106,8 @@ void setUpSystem() {
 	directoryEntry_2.createTime 		= 0;
 	directoryEntry_2.createDate 		= 0;
 	directoryEntry_2.lastAccessDate 	= 0;
-	directoryEntry_2.firstClusterNumHI 	= 0;
-	directoryEntry_2.firstClusterNumLO 	= 0;
+	directoryEntry_2.firstClusterNumHI 	= 2;
+	directoryEntry_2.firstClusterNumLO 	= 43;
 	directoryEntry_2.writeTime 			= 0;
 	directoryEntry_2.writeDate 			= 0;
 	directoryEntry_2.fileSize 			= 0;
@@ -108,7 +134,7 @@ void setUpSystem() {
 	directoryEntry_4.createDate 		= 10830;	// 0010 1010 0100 1110
 	directoryEntry_4.lastAccessDate 	= 0;
 	directoryEntry_4.firstClusterNumHI 	= 0;
-	directoryEntry_4.firstClusterNumLO 	= 0;
+	directoryEntry_4.firstClusterNumLO 	= 54;
 	directoryEntry_4.writeTime 			= 0;
 	directoryEntry_4.writeDate 			= 0;
 	directoryEntry_4.fileSize 			= 342;
@@ -261,6 +287,53 @@ void testIsLongName(int testNumber) {
 		actualValue = isLongName(system[i]);
 		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 		
 	} 
+}
+
+void testCheckFileExists(int testNumber) {
+	int directoryEntryAddress;
+	uint64_t rootByteAddress;
+	
+	printf("Testing checkFileExists()...\n");
+	
+	rootByteAddress = convertClusterNumToBytes(thisBootSector, thisBootSector.rootClusterNum);
+
+	if (testNumber == 1) {
+		printf("Running test 1...\n");
+		directoryEntryAddress = checkFileExists(filePtr, "FSINFO  TXT", rootByteAddress);
+		printf("Expected Value = 1049664; Actual Value = %d\n", directoryEntryAddress);
+	}
+	else if (testNumber == 2) {
+		printf("Running test 2...\n");
+		directoryEntryAddress = checkFileExists(filePtr, "DIR", rootByteAddress);
+		printf("Expected Value = 1049920; Actual Value = %d\n", directoryEntryAddress);
+	}
+	else if (testNumber == 3) {
+		printf("Running test 3...\n");
+		directoryEntryAddress = checkFileExists(filePtr, ".ECRET  TXT", rootByteAddress);
+		printf("Expected Value = -1; Actual Value = %d\n", directoryEntryAddress);
+	}
+	else if (testNumber == 4) {
+		printf("Running test 4...\n");
+		directoryEntryAddress = checkFileExists(filePtr, "CHUCKLES", rootByteAddress);
+		printf("Expected Value = -1; Actual Value = %d\n", directoryEntryAddress);
+	}
+	else if (testNumber == 5) {
+		printf("Running test 5...\n");
+		directoryEntryAddress = checkFileExists(filePtr, "POOPOOBA", rootByteAddress);
+		printf("Expected Value = -1; Actual Value = %d\n", directoryEntryAddress);
+	}
+}
+
+void testGetFirstClusterOfEntry(int testNumber) {
+	int i;	
+	int expectedValues[ENTRIES_COUNT] = {0, 131115, 0, 54, 0, 0};
+	uint32_t actualValue;
+	
+	printf("Testing getFirstClusterOfEntry()...\n");
+	for (i = 0; i < ENTRIES_COUNT; i++) {
+		actualValue = getFirstClusterOfEntry(system[i]);
+		printf("Expected Value = %d; Actual Value = %d\n", expectedValues[i], actualValue); 		
+	}
 }
 
 void testConvertToDateStruct(int testNumber) {	

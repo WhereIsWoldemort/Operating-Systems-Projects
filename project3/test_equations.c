@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
 	testGetThisFATEntryOffset(1);
 	testConvertSectorNumToBytes(1); 
 	testConvertClusterNumToBytes(1);
+	testConvertClusterNumToBytes(2);
 
 	return 0;
 }
@@ -115,7 +116,14 @@ void testConvertSectorNumToBytes(int testNumber) {
 
 void testConvertClusterNumToBytes(int testNumber) {
 	uint64_t clusterNumberInBytes;
+
 	printf("Testing convertClusterNumToBytes()...\n");
-	clusterNumberInBytes = convertClusterNumToBytes(thisBootSector, 403);
-	printf("Expected Value = 1254912;  Actual Value = %d\n", clusterNumberInBytes);
+	if (testNumber == 1) {
+		clusterNumberInBytes = convertClusterNumToBytes(thisBootSector, 403);
+		printf("Expected Value = 1254912;  Actual Value = %d\n", clusterNumberInBytes);
+	}
+	else if (testNumber == 2) {
+		clusterNumberInBytes = convertClusterNumToBytes(thisBootSector, 2);
+		printf("Expected Value = 1049600; Actual Value = %d\n", clusterNumberInBytes);
+	}
 } 

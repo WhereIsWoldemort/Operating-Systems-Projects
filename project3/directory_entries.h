@@ -137,11 +137,13 @@ BOOL isEndOfDirectory(fileData thisFileData);
 // Notes: 		this applies to directories/files that were deleted
 BOOL isEmptyDirectoryEntry(fileData thisFileData); 
 
-// In:			filePtr (FILE*), directoryName (char*), directoryAddress (uint64_t)
-// Out:			boolean
+// In:			filePtr (FILE*), fileName (char*), currentByteAddress (uint64_t)
+// Out:			directoryEntryAddress (uint64_t)
 // Purpose:		to determine if a file exists in the current directory
-// Notes: 		this applies to directories/files that were deleted
-uint64_t checkFileExists(FILE* filePtr, char* directoryName, uint64_t directoryAddress);
+// Notes: 		this applies to directories/files that were deleted; it should be noted
+//				that the address returned is the address oof the directory entry NOT the 
+//				actual file contents; -1 is returned if the file doesn't exist
+uint64_t checkFileExists(FILE* filePtr, char* fileName, uint64_t currentByteAddress);
 
 // In:			thisFileData (fileData (struct))
 // Out: 		boolean
