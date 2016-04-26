@@ -142,9 +142,10 @@ uint64_t checkFileExists(FILE* filePtr, bootSector thisBootSector, char* fileNam
 	uint32_t sectorNumber;					
 	uint64_t sectorNumberInBytes;
 	uint64_t currentByteAddress;		
-
-	printf("checkFile gets %s\n", fileName);
-	printf("checkFile gets %d\n", currentClusterNumber);
+	char* name; 
+	char* ext;
+	char toCompare[SH_DIRNAME_SIZE + 1];
+	int i;									// looping variable
 
 	while (currentClusterNumber != EOC) {
 		firstSectorOfCluster = getFirstSectorOfCluster(thisBootSector, currentClusterNumber);		
@@ -166,7 +167,27 @@ uint64_t checkFileExists(FILE* filePtr, bootSector thisBootSector, char* fileNam
 					/**
 					FIX THIS strlen or strcmp
 					*/
-					if (strncmp(thisFileData.fileName, fileName, strlen(fileName) - 1) == 0)
+
+
+					name = strtok(thisFileData.fileName, " ");
+					if (isFile(thisFileData))
+					{
+						ext = strtok(NULL, " ");
+					}
+
+					strcpy(toCompare, name);
+					if (isFile(thisFileData))
+					{
+						strcat(toCompare, ".");
+						strcat(toCompare, ext);
+					}
+
+					for (i = 0; i < SH_DIRNAME_SIZE + 1; i++)
+					{
+						toCompare[i] = tolower(toCompare[i]);
+					}
+
+					if (strcmp(toCompare, fileName) == 0)
 					{
 						return currentByteAddress;
 					}	  	
@@ -174,6 +195,8 @@ uint64_t checkFileExists(FILE* filePtr, bootSector thisBootSector, char* fileNam
 			}
 		}
 			
+	
+	
 		// determine the next currentClusterNumber
 		thisFATEntry = getFATEntry(filePtr, thisBootSector, currentClusterNumber);
 		currentClusterNumber = thisFATEntry.nextClusterNumber;

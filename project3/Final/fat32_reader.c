@@ -33,10 +33,10 @@
 //////////////////////////////////////////////////////////
 // GLOBAL VARIABLES //////////////////////////////////////
 //////////////////////////////////////////////////////////
-FILE* 		filePtr;				// pointer to the fat32 image file
-bootSector  thisBootSector;
-uint64_t 	currentByteAddress;		// stores the byte address of the current directory
-uint64_t    parentDirectoryAddress = -1;
+FILE* 		filePtr;						// pointer to the fat32 image file
+bootSector  thisBootSector;					// a struct of all system information
+uint64_t 	currentByteAddress;				// stores the byte address of the current directory
+uint64_t    parentDirectoryAddress = -1;	// the address of the parent directory to the directory we are currently in
 
 //////////////////////////////////////////////////////////
 // FUNCTION PROTOTYPES ///////////////////////////////////
@@ -44,9 +44,10 @@ uint64_t    parentDirectoryAddress = -1;
 void printInfo();
 void printVolumeName();
 void printStats(char* fileName);
-void listFiles();
+void listFiles(char* directory);
 void changeDirectory(char* directory);
 void readFile();
+void replaceNewLine(char* string);
 
 /* This is the main function of your project, and it will be run
  * first before all other functions.
@@ -54,9 +55,7 @@ void readFile();
 int main(int argc, char *argv[])
 {
 	char 		cmd_line[MAX_CMD];		// command line container for our file system shell
-	uint32_t 	fatSectorNumber;		//TODO add comment
-	uint16_t 	fatEntryOffset;			//
-	uint32_t 	rootFirstSectorNum;		//
+	uint32_t 	rootFirstSectorNum;		// the first sector of the root directory
 
 	/* Parse args and open our image file */
 	if (argc != 2) {
@@ -105,7 +104,8 @@ int main(int argc, char *argv[])
 			changeDirectory(strtok(NULL, " "));
 		}
 		else if(strncmp(cmd_line,"ls",2)==0) {
-			listFiles();
+			strtok(cmd_line, " ");
+			listFiles(strtok(NULL, " "));
 		}
 
 		else if(strncmp(cmd_line,"read",4)==0) {
@@ -188,30 +188,36 @@ void printVolumeName() {
 // Purpose:		to print out stats about a give file
 // Notes:		
 void printStats(char* fileName) {
-	fileData thisFileData;
+	fileData thisFileData;	// stores the info in the current directory we are looking
 	uint64_t byteAddress;	// the byte address of the given fileName, -1 if that fileName is not in the current directory
-	date thisCreateDate;
-	time thisCreateTime;
-	date thisLastAccessDate;
-	date thisWriteDate;
-	time thisWriteTime;
 	char* ext;
 	char* name;
-	char toPrint[12];	
-	int i;
+	char toPrint[12];		
+	int i;					// looping variable
 
+	printf("%s what now?\n", fileName);	
+
+	replaceNewLine(fileName);
+
+	printf("%s this now!\n", fileName);
+	
+	
 	// check if the file name exists
 	byteAddress = checkFileExists(filePtr, thisBootSector, fileName, convertBytesToClusterNum(thisBootSector, currentByteAddress));
 	
 	// if the file does not exist, tell the user this
 	// if the file exists print out the contents of the associated directory entry
 	if (byteAddress == -1) {	
-		printf("That file does not exist in this directory.\n");
+		printf("ERROR: That file does not exist in this directory.\n");
 	} else {
-		thisFileData 		= getFileData(filePtr, byteAddress);
+		thisFileData = getFileData(filePtr, byteAddress);
 
+		// this part of our code assumes space are between the file name and extension
+		// grab the file name
 		name = strtok(thisFileData.fileName, " ");
 
+		// if this directory entry is for a file that means it has an extension
+		// so grab the extension
 		if (isFile(thisFileData))
 		{
 			ext = strtok(NULL, " ");
@@ -281,7 +287,8 @@ void changeDirectory(char* directory) {
 	uint32_t currentClusterNumber;
 	fileData thisFileData;
 
-
+		
+	replaceNewLine(directory);
 	cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress));
 	if (cwdSet==-1)
 	{
@@ -298,7 +305,6 @@ void changeDirectory(char* directory) {
 			currentByteAddress += thisFileData.firstClusterNumLO;
 			currentByteAddress = getFirstSectorOfCluster(thisBootSector, currentByteAddress);
 			currentByteAddress = convertSectorNumToBytes(thisBootSector, currentByteAddress);
-			printf("%x\n", currentByteAddress);
 		}
 		else
 		{
@@ -311,9 +317,9 @@ void changeDirectory(char* directory) {
 // Out: none
 // Purpose:
 // Notes:
-void listFiles() {
-	uint64_t byteAddress; 		// holds the address of the directory entry we are accessing
-	fileData thisFileData;		// holds the current file data (metadata!)
+void listFiles(char* directory) {
+	uint64_t byteAddress; 				// holds the address of the directory entry we are accessing
+	fileData thisFileData;				// holds the current file data (metadata!)
 	char toPrint[SH_DIRNAME_SIZE + 1];
 	char* ext;
 	char* name;
@@ -322,8 +328,37 @@ void listFiles() {
 	uint32_t firstSectorOfCluster;
 	uint64_t sectorNumberInBytes;
 	FATEntry thisFATEntry;
+	int cwdSet;
+	char changeBack[3] = "..";
 
 	uint32_t sectorNumber;
+
+
+	if(directory != '\0')
+	{
+		replaceNewLine(directory);
+
+		cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress)); 
+
+		if (cwdSet==-1)
+		{
+			printf("Error: The entered value does not exist\n");
+			return;
+		}
+		else
+		{	
+			thisFileData = getFileData(filePtr, cwdSet);
+			if (isDirectory(thisFileData))
+			{
+				changeDirectory(directory);					
+			}
+			else
+			{
+				printf("Error: The entered value is not a directory\n");
+				return;
+			}	
+		}
+	}
 
 	currentClusterNumber = convertBytesToClusterNum(thisBootSector, currentByteAddress);
 
@@ -338,6 +373,12 @@ void listFiles() {
 
 				if (isEndOfDirectory(thisFileData)) {
 					printf("\n");
+
+	
+					if (directory != '\0')
+					{
+						changeDirectory(changeBack);
+					}
 					return;
 				}
 
@@ -370,6 +411,7 @@ void listFiles() {
 		thisFATEntry = getFATEntry(filePtr, thisBootSector, currentClusterNumber);
 		currentClusterNumber = thisFATEntry.nextClusterNumber;
 	}
+	
 	printf("\n");
 }
 
@@ -392,10 +434,6 @@ void readFile(char* to, char* from, char* file) {
 	uint32_t fromOffset;
 	uint32_t toOffset;
 
-
-	printf("%s", to);
-	printf("%s", from);
-
 	fromOffset = strtoul(from, &ptr, 10);
 	toOffset = strtoul(to, &ptr, 10);
 
@@ -409,20 +447,25 @@ void readFile(char* to, char* from, char* file) {
 		return;
 	}
 
+	if (fromOffset > toOffset)
+	{
+		printf("ERROR: Your starting index is greater than your ending index.\n");
+		return;
+	}
+	
 	//Read in the file header
 	thisFileData = getFileData(filePtr, fileLoc);
+	if (toOffset > thisFileData.fileSize)
+	{
+		printf("ERROR: Attempt to read beyond end of file.\n");
+		return;
+	}
 
 	//Find the address of the data
 	currentClusterNumber = getFirstClusterOfEntry(thisBootSector, thisFileData);
 
 	//Convert the current cluster number 
 	startingByteAddress = convertSectorNumToBytes(thisBootSector, getFirstSectorOfCluster(thisBootSector, currentClusterNumber));
-
-
-	printf("%x\n", (fromOffset));
-	printf("%x\n", (toOffset));
-	printf("%x\n", (startingByteAddress + fromOffset));
-	printf("%x\n", (startingByteAddress + toOffset));
 
 	while (currentClusterNumber < EOC) {
 		firstSectorOfCluster = getFirstSectorOfCluster(thisBootSector, currentClusterNumber);		
@@ -452,4 +495,14 @@ void readFile(char* to, char* from, char* file) {
 	}
 	printf("\n");
 }
+
+void replaceNewLine(char* string) {
+    int index = 0;
+
+    while (string[index] != '\n' && string[index] != '\0') {
+        index++;
+    }
+    string[index] = '\0';
+}
+
 
