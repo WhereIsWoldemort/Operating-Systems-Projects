@@ -72,12 +72,40 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	printf("\n");
+	printColorTemplate("panther", "               =================\n", stdout);
+	printColorTemplate("panther", "           =========================\n", stdout);
+	printColorTemplate("panther", "         =============================\n", stdout);
+	printColorTemplate("panther", "       =================================\n", stdout);
+	printColorTemplate("panther", "      ===================================\n", stdout);
+	printColorTemplate("panther", "     =====================================\n", stdout);
+	printColorTemplate("panther", "    =======================================\n", stdout);
+	printColorTemplate("panther", "   =========================================\n", stdout);
+	printColorTemplate("panther", "  ===========================================\n", stdout);
+	printColorTemplate("panther", " =============================================\n", stdout);
+	printColorTemplate("panther", "===============================================\n", stdout);
+	printColorTemplate("panther", "|||||                                     |||||\n", stdout); 
+	printColorTemplate("panther", "|||||          PANTHER PROMPT 1.0         |||||\n", stdout); 
+	printColorTemplate("panther", "|||||                                     |||||\n", stdout); 
+	printColorTemplate("panther", "===============================================\n", stdout);
+	printColorTemplate("panther", " =============================================\n", stdout);
+	printColorTemplate("panther", "  ===========================================\n", stdout);
+	printColorTemplate("panther", "   =========================================\n", stdout);
+	printColorTemplate("panther", "    =======================================\n", stdout);
+	printColorTemplate("panther", "     =====================================\n", stdout);
+	printColorTemplate("panther", "      ===================================\n", stdout);
+	printColorTemplate("panther", "       =================================\n", stdout);
+	printColorTemplate("panther", "         =============================\n", stdout);
+	printColorTemplate("panther", "           =========================\n", stdout);
+	printColorTemplate("panther", "               =================\n", stdout);
+	printf("\n");
+
 	thisBootSector = setUpBootSector(filePtr);
 
 	/* Get root directory address */
 	rootFirstSectorNum = getFirstSectorOfCluster(thisBootSector, thisBootSector.rootClusterNum);
 	currentByteAddress = convertSectorNumToBytes(thisBootSector, rootFirstSectorNum);
-	printf("Root addr is hex: 0x%x, dec: %d\n", currentByteAddress, currentByteAddress);
+	//printf("Root addr is hex: 0x%x, dec: %d\n", currentByteAddress, currentByteAddress);
 
 	/* Main loop.  You probably want to create a helper function
        for each command besides quit. */
@@ -312,8 +340,14 @@ void changeDirectory(char* directory) {
 	else
 	{	
 		thisFileData = getFileData(filePtr, cwdSet);
-		if (isDirectory(thisFileData))
+		
+		if ((strncmp(directory, "..", 2) == 0) && parentDirectoryAddress != -1) {
+			currentByteAddress = parentDirectoryAddress;			
+		}
+		else if (isDirectory(thisFileData))
 		{
+			// store our current address before we move
+			parentDirectoryAddress = currentByteAddress;
 			currentByteAddress = cwdSet;
 			currentByteAddress = thisFileData.firstClusterNumHI;
 			currentByteAddress = currentByteAddress << 16;
@@ -352,6 +386,7 @@ void listFiles(char* directory) {
 	FATEntry thisFATEntry;
 	int cwdSet;
 	char changeBack[3] = "..";
+	uint64_t hereByteAddress;
 
 	uint32_t byteAddressOfSearch;
 
@@ -362,6 +397,7 @@ void listFiles(char* directory) {
 		replaceNewLine(directory);
 
 		cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress)); 
+		hereByteAddress = currentByteAddress;
 
 		if (cwdSet==-1)
 		{
@@ -547,7 +583,7 @@ void readFile(char* to, char* from, char* file) {
 void printHelp() {
 	printf("\n");
 	printColorTemplate("panther", "Welcome to Panther Prompt's help manual\n", stdout);
-	printColorTemplate("panther", "-------------------------------------------------------------\n", stdout);
+	printColorTemplate("panther", "-----------------------------------------------------------------------------------------------------------------------\n", stdout);
 	printColor("blue", "Here is a list of available commands...\n", stdout);
 	printf(" > ls <directory_name>             -> list all files in <directory_name>; <directory_name> defaults to '.'i\n");
 	printf(" > cd <directory_name>             -> change your directory to <directory_name>\n");
@@ -555,7 +591,12 @@ void printHelp() {
 	printf(" > read <archive_name> <from> <to> -> read file <archive_name> from <from> to <to>; <from> and <to> must be integers\n");
 	printf(" > quit                            -> quit Panther Prompt =( \n");
 	printf(" > help                            -> display this help screen \n");
-	printColorTemplate("panther", "-------------------------------------------------------------\n", stdout);
+	printColor("blue", "Some issues we are aware of...\n", stdout);
+	printf(" > ls .. is broken\n");
+	printf(" > stat with no paramaters seg faults\n");
+	printf(" > we are assuming there is a volume name on the file system image\n");
+	printf("(These fixes will be released in further releases?)\n");
+	printColorTemplate("panther", "-----------------------------------------------------------------------------------------------------------------------\n", stdout);
 	printf("\n");	
 }
 
