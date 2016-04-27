@@ -19,6 +19,7 @@
 #include "directory_entries.h"
 #include "equations.h"
 #include "fat_entries.h"
+#include "color.h"
 //#include "format.h"
 
 //////////////////////////////////////////////////////
@@ -47,6 +48,7 @@ void printStats(char* fileName);
 void listFiles(char* directory);
 void changeDirectory(char* directory);
 void readFile();
+void printHelp();
 void replaceNewLine(char* string);
 
 /* This is the main function of your project, and it will be run
@@ -59,7 +61,9 @@ int main(int argc, char *argv[])
 
 	/* Parse args and open our image file */
 	if (argc != 2) {
-		printf("You entered an incorrect amount of arguments for this program. <USAGE: ./fat32_reader fat32.img>\n");
+		printf("\n");
+		printColor("red", "You entered an incorrect amount of arguments for this program. <USAGE: ./fat32_reader fat32.img>\n", stdout);
+		printf("\n");
 		return -1;
 	}
 
@@ -75,7 +79,6 @@ int main(int argc, char *argv[])
 	currentByteAddress = convertSectorNumToBytes(thisBootSector, rootFirstSectorNum);
 	printf("Root addr is hex: 0x%x, dec: %d\n", currentByteAddress, currentByteAddress);
 
-
 	/* Main loop.  You probably want to create a helper function
        for each command besides quit. */
 
@@ -88,18 +91,14 @@ int main(int argc, char *argv[])
 		if(strncmp(cmd_line,"info",4)==0) {
 			printInfo();
 		}
-
 		else if(strncmp(cmd_line,"volume",6)==0) {
 			printVolumeName();
 		}
-		
 		else if(strncmp(cmd_line,"stat",4)==0) {
 			strtok(cmd_line, " ");
 			printStats(strtok(NULL, " "));
 		}
-
 		else if(strncmp(cmd_line,"cd",2)==0) {	
-			//TODO: Handle dumbasses
 			strtok(cmd_line, " ");
 			changeDirectory(strtok(NULL, " "));
 		}
@@ -107,19 +106,22 @@ int main(int argc, char *argv[])
 			strtok(cmd_line, " ");
 			listFiles(strtok(NULL, " "));
 		}
-
 		else if(strncmp(cmd_line,"read",4)==0) {
 			strtok(cmd_line, " ");
 			readFile(strtok(NULL, " "), strtok(NULL, " "), strtok(NULL, " "));
 		}
-		
 		else if(strncmp(cmd_line,"quit",4)==0) {
-			printf("Quitting.\n");
+			printf("\n");
+			printColorTemplate("rainbow", "Quitting.\n", stdout);
+			printf("\n");
 			break;
 		}
-		else
-			printf("Unrecognized command.\n");
-
+		else if (strncmp(cmd_line, "help", 4) == 0) {
+			printHelp();
+		}
+		else {
+			printColor("red", "Unrecognized command.\n", stdout);
+		}
 
 	}
 
@@ -134,8 +136,8 @@ int main(int argc, char *argv[])
 // Purpose: to print out all relevant information when "info" command is entered
 // Notes: 
 void printInfo() {
-	printf("\nGoing to display info.\n");
-	printf("--------------------------\n");
+	printColorTemplate("panther", "\n                          Going to display info.\n", stdout);
+	printColorTemplate("panther", "--------------------------------------------------------------------------\n", stdout);
 	printf("Bytes Per Sector                => hex: 0x%08x dec: %d\n", thisBootSector.bytesPerSector, thisBootSector.bytesPerSector);
 	printf("Sectors Per Cluster             => hex: 0x%08x dec: %d\n", thisBootSector.sectorsPerCluster, thisBootSector.sectorsPerCluster);
 	printf("Reserved Sector Count           => hex: 0x%08x dec: %d\n", thisBootSector.reservedSectorCount, thisBootSector.reservedSectorCount);
@@ -145,8 +147,11 @@ void printInfo() {
 	printf("Root Entry Count                => hex: 0x%08x dec: %d\n", thisBootSector.rootEntryCount, thisBootSector.rootEntryCount);
 	printf("Total Sectors                   => hex: 0x%08x dec: %d\n", thisBootSector.totalSectors, thisBootSector.totalSectors);
 	printf("First Data Sector Sector Number => hex: 0x%08x dec: %d\n", thisBootSector.firstDataSector, thisBootSector.firstDataSector);
-	printf("First Data Sector in Bytes      => hex: 0x%08x dec: %d\n\n", thisBootSector.firstDataSector * thisBootSector.bytesPerSector, thisBootSector.firstDataSector * thisBootSector.bytesPerSector);
+	printf("First Data Sector in Bytes      => hex: 0x%08x dec: %d\n", thisBootSector.firstDataSector * thisBootSector.bytesPerSector, thisBootSector.firstDataSector * thisBootSector.bytesPerSector);
+	printColorTemplate("panther", "--------------------------------------------------------------------------\n", stdout);
+	printf("\n");
 }
+
 
 // In:			none
 // Out: 		none
@@ -158,8 +163,9 @@ void printVolumeName() {
 	int sectorByteCounter;				// counter that tracks how many bytes we've read within the current sector
 	fileData thisFileData;				// holds the fileData for the current directory entry being looked at
 
-	printf("Volume Names\n");
-	printf("---------------------\n");
+	printf("\n");
+	printColorTemplate("panther", "           Volume Name(s)\n", stdout);
+	printColorTemplate("panther", "---------------------------------\n", stdout);
 	
 	// 1. determine the first sector of root cluster number
 	sectorNumber = getFirstSectorOfCluster(thisBootSector, thisBootSector.rootClusterNum);
@@ -175,12 +181,15 @@ void printVolumeName() {
 		thisFileData.fileName[SH_FILE_NAME] = '\0';
 
 		if (isVolumeLabel(thisFileData)) {
-			printf("%s\n", thisFileData.fileName);
+			printf("            %s\n", thisFileData.fileName);
 		}
 		
 		byteAddress += DIR_ENTRY_SIZE;
 		sectorByteCounter += DIR_ENTRY_SIZE;
-	}		
+	}
+
+	printColorTemplate("panther", "---------------------------------\n", stdout);
+	printf("\n");		
 }
 
 // In: 			fileName (string)
@@ -195,21 +204,19 @@ void printStats(char* fileName) {
 	char toPrint[12];		
 	int i;					// looping variable
 
-	printf("%s what now?\n", fileName);	
-
 	replaceNewLine(fileName);
 
-	printf("%s this now!\n", fileName);
-	
-	
 	// check if the file name exists
 	byteAddress = checkFileExists(filePtr, thisBootSector, fileName, convertBytesToClusterNum(thisBootSector, currentByteAddress));
 	
 	// if the file does not exist, tell the user this
 	// if the file exists print out the contents of the associated directory entry
 	if (byteAddress == -1) {	
-		printf("ERROR: That file does not exist in this directory.\n");
-	} else {
+		printf("\n");
+		printColor("red", "ERROR: That file does not exist in this directory.\n", stdout);
+		printf("\n");
+	} 
+	else {
 		thisFileData = getFileData(filePtr, byteAddress);
 
 		// this part of our code assumes space are between the file name and extension
@@ -235,32 +242,35 @@ void printStats(char* fileName) {
 			toPrint[i] = tolower(toPrint[i]);
 		}
 
-		printf("File Name: %s\n", toPrint);
-		printf("File Size: %d\n", thisFileData.fileSize);
+		printf("\n");
+		printColorTemplate("panther", "Printing stats...\n", stdout);
+		printColorTemplate("panther", "-------------------------\n", stdout);
+		printf("File Name:           %s\n", toPrint);
+		printf("File Size:           %d\n", thisFileData.fileSize);
 
 		switch (thisFileData.fileAttributes) {
 			case 1:
-				printf("File Attribute: Read Only File\n");
+				printf("File Attribute:      Read Only File\n");
 				break;
 			
 			case 2:
-				printf("File Attribute: Hidden File\n");
+				printf("File Attribute:      Hidden File\n");
 				break;
 
 			case 4:
-				printf("File Attribute: System File\n");
+				printf("File Attribute:      System File\n");
 				break;
 
 			case 8:
-				printf("File Attribute: Volume\n");
+				printf("File Attribute:      Volume\n");
 				break;
 
 			case 16:
-				printf("File Attribute: Directory\n");
+				printf("File Attribute:      Directory\n");
 				break;
 
 			case 32:
-				printf("File Attribute: Archive File\n");
+				printf("File Attribute:      Archive File\n");
 				break;
 		}	
 
@@ -273,7 +283,10 @@ void printStats(char* fileName) {
 		//Get the low word from the file and add it to the first cluster entry
 		firstClusterEntry += thisFileData.firstClusterNumLO;
 
-		printf("Next Cluster Number: 0x%x\n", firstClusterEntry);
+		printf("Next Cluster Number: 0x%04x\n", firstClusterEntry);
+		
+		printColorTemplate("panther", "-------------------------\n", stdout);
+		printf("\n");
 	}
 }
 
@@ -292,7 +305,9 @@ void changeDirectory(char* directory) {
 	cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress));
 	if (cwdSet==-1)
 	{
-		printf("Error: The entered value does not exist\n");
+		printf("\n");
+		printColor("red", "Error: The entered value does not exist\n", stdout);
+		printf("\n");
 	}
 	else
 	{	
@@ -305,18 +320,25 @@ void changeDirectory(char* directory) {
 			currentByteAddress += thisFileData.firstClusterNumLO;
 			currentByteAddress = getFirstSectorOfCluster(thisBootSector, currentByteAddress);
 			currentByteAddress = convertSectorNumToBytes(thisBootSector, currentByteAddress);
+			//Handle Root issues
+			if (currentByteAddress == 1048576)
+			{
+				currentByteAddress = 1049600;
+			}
 		}
 		else
 		{
-			printf("Error: The entered value is not a directory\n");
+			printf("\n");
+			printColor("red", "Error: The entered value is not a directory\n", stdout);
+			printf("\n");
 		}			
 	}
 }
 
-// In: 
-// Out: none
-// Purpose:
-// Notes:
+// In: 			directory (string)
+// Out: 		none
+// Purpose:		to list files based on a directory name 
+// Notes:		if no directory name is provided then list files in the current directory
 void listFiles(char* directory) {
 	uint64_t byteAddress; 				// holds the address of the directory entry we are accessing
 	fileData thisFileData;				// holds the current file data (metadata!)
@@ -331,18 +353,21 @@ void listFiles(char* directory) {
 	int cwdSet;
 	char changeBack[3] = "..";
 
+	uint32_t byteAddressOfSearch;
+
 	uint32_t sectorNumber;
 
-
 	if(directory != '\0')
-	{
+	{		
 		replaceNewLine(directory);
 
 		cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress)); 
 
 		if (cwdSet==-1)
 		{
-			printf("Error: The entered value does not exist\n");
+			printf("\n");
+			printColor("red", "Error: The entered value does not exist\n", stdout);
+			printf("\n");
 			return;
 		}
 		else
@@ -350,11 +375,23 @@ void listFiles(char* directory) {
 			thisFileData = getFileData(filePtr, cwdSet);
 			if (isDirectory(thisFileData))
 			{
-				changeDirectory(directory);					
+				if (strncmp(directory, "..", 2) == 0)
+				{
+					printf("\n");
+					printColor("red", "Error: Can't look back\n", stdout);
+					printf("\n");
+					return;
+				}
+				else
+				{
+					changeDirectory(directory);
+				}
 			}
 			else
 			{
-				printf("Error: The entered value is not a directory\n");
+				printf("\n");
+				printColor("red", "Error: The entered value is not a directory\n", stdout);
+				printf("\n");
 				return;
 			}	
 		}
@@ -374,7 +411,6 @@ void listFiles(char* directory) {
 				if (isEndOfDirectory(thisFileData)) {
 					printf("\n");
 
-	
 					if (directory != '\0')
 					{
 						changeDirectory(changeBack);
@@ -443,13 +479,17 @@ void readFile(char* to, char* from, char* file) {
 	//If the file doesn't exist yell at Dr. Diesburg
 	if (fileLoc == -1)
 	{
-		printf("Silly Dr. Diesburg, that file doesn't exist!\n");
+		printf("\n");
+		printColor("red", "Silly Dr. Diesburg, that file doesn't exist!\n", stdout);
+		printf("\n");
 		return;
 	}
 
 	if (fromOffset > toOffset)
 	{
-		printf("ERROR: Your starting index is greater than your ending index.\n");
+		printf("\n");
+		printColor("red", "ERROR: Your starting index is greater than your ending index.\n", stdout);
+		printf("\n");
 		return;
 	}
 	
@@ -457,10 +497,15 @@ void readFile(char* to, char* from, char* file) {
 	thisFileData = getFileData(filePtr, fileLoc);
 	if (toOffset > thisFileData.fileSize)
 	{
-		printf("ERROR: Attempt to read beyond end of file.\n");
+		printf("\n");
+		printColor("red", "ERROR: Attempt to read beyond end of file.\n", stdout);
+		printf("\n");
 		return;
 	}
 
+	printf("\n");
+	printColorTemplate("panther", "Printing file contents ...\n", stdout);
+	printColorTemplate("panther", "-----------------------------------------\n", stdout);
 	//Find the address of the data
 	currentClusterNumber = getFirstClusterOfEntry(thisBootSector, thisFileData);
 
@@ -477,6 +522,8 @@ void readFile(char* to, char* from, char* file) {
 			for	(byteAddress = sectorNumberInBytes; byteAddress < (sectorNumberInBytes + thisBootSector.bytesPerSector); byteAddress += 1) {
 				if (byteAddress >= (startingByteAddress + toOffset)) {
 					printf("\n");
+					printColorTemplate("panther", "-----------------------------------------\n", stdout);
+					printf("\n");
 					return;
 				}
 
@@ -492,8 +539,24 @@ void readFile(char* to, char* from, char* file) {
 		// determine the next currentClusterNumber
 		thisFATEntry = getFATEntry(filePtr, thisBootSector, currentClusterNumber);
 		currentClusterNumber = thisFATEntry.nextClusterNumber;
-	}
+	}	
+	printColorTemplate("panther", "-----------------------------------------\n", stdout);
 	printf("\n");
+}
+
+void printHelp() {
+	printf("\n");
+	printColorTemplate("panther", "Welcome to Panther Prompt's help manual\n", stdout);
+	printColorTemplate("panther", "-------------------------------------------------------------\n", stdout);
+	printColor("blue", "Here is a list of available commands...\n", stdout);
+	printf(" > ls <directory_name>             -> list all files in <directory_name>; <directory_name> defaults to '.'i\n");
+	printf(" > cd <directory_name>             -> change your directory to <directory_name>\n");
+	printf(" > stat <file_name>                -> display file stats on <file_name>\n");
+	printf(" > read <archive_name> <from> <to> -> read file <archive_name> from <from> to <to>; <from> and <to> must be integers\n");
+	printf(" > quit                            -> quit Panther Prompt =( \n");
+	printf(" > help                            -> display this help screen \n");
+	printColorTemplate("panther", "-------------------------------------------------------------\n", stdout);
+	printf("\n");	
 }
 
 void replaceNewLine(char* string) {

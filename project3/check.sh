@@ -3,9 +3,9 @@
 ############################
 # TEST DIRECTORY_ENTRIES.C #
 ############################
-gcc -o test_directory_entries test_directory_entries.c directory_entries.c equations.c boot_sector.c fat_entries.c
-./test_directory_entries fat32.img
-rm test_directory_entries
+#gcc -o test_directory_entries test_directory_entries.c directory_entries.c equations.c boot_sector.c fat_entries.c
+#./test_directory_entries fat32.img
+#rm test_directory_entries
 
 ######################
 # TEST BOOT_SECTOR.C #
@@ -28,4 +28,10 @@ rm test_directory_entries
 #./test_fat_entries fat32.img
 #rm test_fat_entries
 
+######################
+# TEST COLORS.C      #
+######################
+gcc -o test_color test_color.c color.c
+./test_color
+rm test_color
 
