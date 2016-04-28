@@ -39,4 +39,16 @@ void printColorTemplate(char* templateString, char* outputString, FILE* file);
 // Notes:
 void colorReset(FILE* file);
 
+// In:			outputString (string)
+// Out:			none
+// Purpose:		to print a string in red to indicate error or failure
+// Notes:		different implementation (do not have to declare stdout as file destination)
+void printFailure(char* outputString);
+
+// In:			outputString (string)
+// Out:			none
+// Purpose:		to print a string in green to indicate something good
+// Notes:		different implementation (do not have to declare stdout as file destination)
+void printSuccess(char* outputString);
+
 #endif /* COLOR_H */

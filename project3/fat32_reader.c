@@ -186,7 +186,6 @@ void printInfo() {
 	printf("\n");
 }
 
-
 // In:			none
 // Out: 		none
 // Purpose: 	to print the volume name 
@@ -196,6 +195,7 @@ void printVolumeName() {
 	uint32_t sectorNumber;				// the sector number of the first sector of a cluster
 	int sectorByteCounter;				// counter that tracks how many bytes we've read within the current sector
 	fileData thisFileData;				// holds the fileData for the current directory entry being looked at
+	BOOL volumeFound;					// flag to indicate if colume was found
 
 	printf("\n");
 	printColorTemplate("panther", "           Volume Name(s)\n", stdout);
@@ -208,7 +208,8 @@ void printVolumeName() {
 	byteAddress = sectorNumber * thisBootSector.bytesPerSector;
 
 	sectorByteCounter = 0;
-	
+	volumeFound = FALSE;	
+
 	while (sectorByteCounter < thisBootSector.bytesPerSector) {
 		// jumps to starting byte address of each directory entry
 		thisFileData = getFileData(filePtr, byteAddress);
@@ -216,11 +217,17 @@ void printVolumeName() {
 
 		if (isVolumeLabel(thisFileData)) {
 			printf("            %s\n", thisFileData.fileName);
+			volumeFound = TRUE;
 		}
 		
 		byteAddress += DIR_ENTRY_SIZE;
 		sectorByteCounter += DIR_ENTRY_SIZE;
 	}
+
+	// if after all this looping, no volume name is found, print error
+	if (!volumeFound) {
+		printColor("red", "Error: no volume name found\n", stdout);
+	}	
 
 	printColorTemplate("panther", "---------------------------------\n", stdout);
 	printf("\n");		
@@ -251,8 +258,6 @@ void printStats(char* fileName) {
 	// if the file does not exist, tell the user this
 	// if the file exists print out the contents of the associated directory entry
 	
-	 
-
 	if (byteAddress == -1) {	
 		printf("\n");
 		printColor("red", "ERROR: That file does not exist in this directory.\n", stdout);
@@ -363,6 +368,7 @@ void changeDirectory(char* directory) {
 		if ((strncmp(directory, "..", 2) == 0) && parentDirectoryAddress != -1) {
 			currentByteAddress = parentDirectoryAddress;			
 		}
+
 		else if (isDirectory(thisFileData))
 		{
 			// store our current address before we move
@@ -377,6 +383,7 @@ void changeDirectory(char* directory) {
 			if (currentByteAddress == 1048576)
 			{
 				currentByteAddress = 1049600;
+				parentDirectoryAddress == -1;
 			}
 		}
 		else
@@ -433,7 +440,12 @@ void listFiles(char* directory) {
 				if (strncmp(directory, "..", 2) == 0)
 				{
 					printf("\n");
-					printColor("red", "Error: Can't look back\n", stdout);
+					changeDirectory(changeBack);
+					listFiles('\0');
+					
+
+					currentByteAddress = hereByteAddress;
+
 					printf("\n");
 					return;
 				}
@@ -617,7 +629,8 @@ void printHelp() {
 	printf(" > quit                            -> quit Panther Prompt =( \n");
 	printf(" > help                            -> display this help screen \n");
 	printColor("blue", "Some issues we are aware of...\n", stdout);
-	printf(" > ls .. is broken\n");
+	printf(" > ls .. is broken for root directory\n");
+	printf(" > calling cd .. after cd . is broken\n");
 	printf(" > we are assuming there is a volume name on the file system image\n");
 	printf("(These fixes will be released in further releases?)\n");
 	printColorTemplate("panther", "-----------------------------------------------------------------------------------------------------------------------\n", stdout);

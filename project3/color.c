@@ -75,3 +75,14 @@ void printColorTemplate(char* templateString, char* outputString, FILE* file) {
 void colorReset(FILE* file) {
 	fputs(ANSI_COLOR_RESET, file);
 }
+
+void printFailure(char* outputString) {
+	printColor("red", "FAILURE: ", stdout);
+	printColor("red", outputString, stdout);
+}
+
+void printSuccess(char* outputString) {
+	printColor("green", "SUCCESS: ", stdout);
+	printColor("green", outputString, stdout);
+}
+

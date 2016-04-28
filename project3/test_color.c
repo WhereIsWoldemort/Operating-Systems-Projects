@@ -9,6 +9,8 @@
 //////////////////////////////////////////////////////////////////////////////////
 void testPrintColor(int testNumber);
 void testPrintColorTemplate(int testNumber);
+void testPrintFailure(int testNumber);
+void testPrintSuccess(int testNumber);
 
 //////////////////////////////////////////////////////////////////////////////////
 // MAIN PROGRAM //////////////////////////////////////////////////////////////////
@@ -22,6 +24,8 @@ int main() {
 	testPrintColor(6);
 	testPrintColorTemplate(1);
 	testPrintColorTemplate(2);
+	testPrintFailure(1);
+	testPrintSuccess(1);
 
 	return 0;
 }
@@ -65,5 +69,11 @@ void testPrintColorTemplate(int testNumber) {
 	} 
 }
 
+void testPrintFailure(int testNumber) {
+	printFailure("This is supposed to be an error!\n");
+}
 
+void testPrintSuccess(int testNumber) {
+	printSuccess("Hooray! We succeeded!\n");
+}
 
