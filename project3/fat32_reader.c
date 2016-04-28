@@ -73,16 +73,21 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n");
-	printColorTemplate("panther", "               =================\n", stdout);
-	printColorTemplate("panther", "           =========================\n", stdout);
-	printColorTemplate("panther", "         =============================\n", stdout);
-	printColorTemplate("panther", "       =================================\n", stdout);
-	printColorTemplate("panther", "      ===================================\n", stdout);
-	printColorTemplate("panther", "     =====================================\n", stdout);
-	printColorTemplate("panther", "    =======================================\n", stdout);
-	printColorTemplate("panther", "   =========================================\n", stdout);
-	printColorTemplate("panther", "  ===========================================\n", stdout);
-	printColorTemplate("panther", " =============================================\n", stdout);
+	printColorTemplate("panther", "  /\\                                      /\\ \n", stdout);
+	printColorTemplate("panther", " /  \\                                    /  \\ \n", stdout);
+	printColorTemplate("panther", "/    \\                                  /    \\ \n", stdout);
+	printColorTemplate("panther", "|     \\	                               /      |   \n", stdout);
+	printColorTemplate("panther", "|      \\                              /       |\n", stdout);
+	printColorTemplate("panther", "|       \\     =================      /        | \n", stdout);
+	printColorTemplate("panther", "|         ===========================         |\n", stdout);
+	printColorTemplate("panther", "|        =============================        | \n", stdout);
+	printColorTemplate("panther", "|      =================================      |  \n", stdout);
+	printColorTemplate("panther", "|     ===================================     | \n", stdout);
+	printColorTemplate("panther", "|    =====================================    | \n", stdout);
+	printColorTemplate("panther", "|   =======================================   | \n", stdout);
+	printColorTemplate("panther", "|  =========================================  |\n", stdout);
+	printColorTemplate("panther", "| =========================================== | \n", stdout);
+	printColorTemplate("panther", "|=============================================| \n", stdout);
 	printColorTemplate("panther", "===============================================\n", stdout);
 	printColorTemplate("panther", "|||||                                     |||||\n", stdout); 
 	printColorTemplate("panther", "|||||          PANTHER PROMPT 1.0         |||||\n", stdout); 
@@ -124,6 +129,7 @@ int main(int argc, char *argv[])
 		}
 		else if(strncmp(cmd_line,"stat",4)==0) {
 			strtok(cmd_line, " ");
+			
 			printStats(strtok(NULL, " "));
 		}
 		else if(strncmp(cmd_line,"cd",2)==0) {	
@@ -232,6 +238,11 @@ void printStats(char* fileName) {
 	char toPrint[12];		
 	int i;					// looping variable
 
+	if (fileName == '\0') {
+		printColor("red", "ERROR: incorrect usage; USAGE: <stat fileName>\n", stdout);
+		return;
+	}
+
 	replaceNewLine(fileName);
 
 	// check if the file name exists
@@ -239,6 +250,9 @@ void printStats(char* fileName) {
 	
 	// if the file does not exist, tell the user this
 	// if the file exists print out the contents of the associated directory entry
+	
+	 
+
 	if (byteAddress == -1) {	
 		printf("\n");
 		printColor("red", "ERROR: That file does not exist in this directory.\n", stdout);
@@ -328,6 +342,11 @@ void changeDirectory(char* directory) {
 	uint32_t currentClusterNumber;
 	fileData thisFileData;
 
+	// if the user doesn't enter anything, they go back to root 
+	if (directory == '\0') {
+		currentByteAddress = 1049600;
+		return;
+	}
 		
 	replaceNewLine(directory);
 	cwdSet = checkFileExists(filePtr, thisBootSector, directory, convertBytesToClusterNum(thisBootSector, currentByteAddress));
@@ -506,6 +525,12 @@ void readFile(char* to, char* from, char* file) {
 	uint32_t fromOffset;
 	uint32_t toOffset;
 
+	// if the user doesn't enter anything, then print an erro	
+	if ((file == '\0') || (to == '\0') || (from == '\0')) {
+		printColor("red", "Error: incorrect usage; USAGE: <read fileName 0 10>\n", stdout);
+		return;
+	}
+
 	fromOffset = strtoul(from, &ptr, 10);
 	toOffset = strtoul(to, &ptr, 10);
 
@@ -593,7 +618,6 @@ void printHelp() {
 	printf(" > help                            -> display this help screen \n");
 	printColor("blue", "Some issues we are aware of...\n", stdout);
 	printf(" > ls .. is broken\n");
-	printf(" > stat with no paramaters seg faults\n");
 	printf(" > we are assuming there is a volume name on the file system image\n");
 	printf("(These fixes will be released in further releases?)\n");
 	printColorTemplate("panther", "-----------------------------------------------------------------------------------------------------------------------\n", stdout);
